@@ -58,6 +58,9 @@ E2E via Playwright (dev-only). Tests live in `tests/`, fixtures in `tests/fixtur
 Requires Node 22+.
 
 - Run: `npm test` · `npm run test:ui` · `npm run test:headed`.
+- `npm run lint` — ESLint (incl. inline JS via eslint-plugin-html) + html-validate +
+  `scripts/lint-custom.mjs` (20 project-specific guards). Report-only; no auto-fix.
+  See `scripts/lint-custom.mjs` rule ids for what each guard flags.
 - `playwright.config.js` serves the repo at http://localhost:4173 (`python3 -m
   http.server`); the app is at `/main.html` (not `/`).
 - Two ways to control the app's data in tests:
