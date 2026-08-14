@@ -18,6 +18,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/deepdash/browser/deepdash.standalone.min.js"></script>
 
+    <style>
+        #tooltip {
+            background-color: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+
     <title>Title</title>
 </head>
 <body>
@@ -143,6 +153,12 @@
 
     <script>
 
+        function postEquipmentResults(equipmentResults) {
+            console.log(equipmentResults);
+
+            var equipmentResutlsDiv = document.getElementById("equipmentList");
+        }
+
         var UNDO_LIMIT = 5;
         var deletedStack = []; // [{ row, count, nextSibling }], LIFO
 
@@ -233,6 +249,8 @@
         function addItemToInventory(item) {
             console.log("clicked")
 
+            const container = item.parentElement;
+
             const liElement = item;
             liElement.setAttribute("x-data", "{ count: 1 }");
             // const hiddenItems = Array.from(container.querySelectorAll('p')).filter(p =>
@@ -246,6 +264,10 @@
 
             var outerDivElement = document.createElement("div");
             outerDivElement.className = "inventory-item";
+
+            var firstDivElement = document.createElement("div");
+            firstDivElement.classList = "";
+
             // var span = document.createElement("span");
 
             var secondDivElement = document.createElement("div");
@@ -306,6 +328,30 @@
             }
         }
 
+        async function getJsonData(url, name) {
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+                }
+                    const data = await response.json();
+                    localStorage.setItem(name, JSON.stringify(data));
+                    console.log(`Stored ${name} in localStorage.`);
+            } catch (error) {
+                console.error('There was a problem with the fetch operation:', error);
+            }
+        }
+
+        function tooltip (element) {
+
+            // console.log("hey")
+
+            // Popper.createPopper(this, tooltip, {
+            //     placement: 'right',
+            // });
+        }
+
         async function startup () {
 
             const itemsBaseJsonUrl = "https://raw.githubusercontent.com/5etools-mirror-3/5etools-2014-src/refs/heads/main/data/items.json"
@@ -331,6 +377,8 @@
             } else {
                 console.log("classesLookupJson already in local storage");
             };
+
+            const classesLookupJson = JSON.parse(localStorage.getItem("classesLookupJson"));
 
             const equipmentJson = JSON.parse(localStorage.getItem("equipmentJson")) ?? { item: [] };
 
