@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-    <script src=" https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js "></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+
     <!-- Latest Sortable -->
     <!-- <script src="https://raw.githack.com/SortableJS/Sortable/master/Sortable.js"></script> -->
 
@@ -14,19 +14,9 @@
 
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.0/dist/cdn.min.js"></script>
 
-    <!-- <script src="https://unpkg.com/@popperjs/core@2"></script>     -->
+    <!-- <script src="https://unpkg.com/@popperjs/core@2"></script> -->
 
     <script src="https://cdn.jsdelivr.net/npm/deepdash/browser/deepdash.standalone.min.js"></script>
-
-    <style>
-        #tooltip {
-            background-color: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-    </style>
 
     <title>Title</title>
 </head>
@@ -39,59 +29,59 @@
 
         <div id="name-container" class="flex items-start pt-4 pb-4 ">
 
-            <input type="text" placeholder="Name" 
-            class="w-1/3 text-xl p-2 border border-gray-300 rounded-md 
-            focus:outline-none 
+            <input type="text" placeholder="Name"
+            class="w-1/3 text-xl p-2 border border-gray-300 rounded-md
+            focus:outline-none
             focus:ring-2 focus:ring-blue-500">
-    
+
             <div class="flex w-2/3 pl-4 pr-4">
                 <div class="w-1/3 flex flex-col space-y-1 pr-2">
-                    <input 
-                        type="text" 
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="" 
-                    />
-                    <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">CLASS & LEVEL</span>
+                    <input
+                        type="text"
+                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=""
+                    >
+                    <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">CLASS &amp; LEVEL</span>
 
-                    <input 
-                        type="text" 
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="" 
-                    />
+                    <input
+                        type="text"
+                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=""
+                    >
                     <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">RACE</span>
 
                 </div>
 
                 <div class="w-1/3 flex flex-col space-y-1 pr-2">
-                    <input 
-                        type="text" 
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="" 
-                    />
+                    <input
+                        type="text"
+                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=""
+                    >
                     <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">BACKGROUND</span>
 
-                    <input 
-                        type="text" 
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="" 
-                    />
+                    <input
+                        type="text"
+                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=""
+                    >
                     <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">ALIGNMENT</span>
 
                 </div>
 
                 <div class="w-1/3 flex flex-col space-y-1 pr-2">
-                    <input 
-                        type="text" 
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="" 
-                    />
+                    <input
+                        type="text"
+                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=""
+                    >
                     <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">PLAYER NAME</span>
 
-                    <input 
-                        type="text" 
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        placeholder="" 
-                    />
+                    <input
+                        type="text"
+                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder=""
+                    >
                     <span class="text-sm text-gray-500 mt-0 pt-0 text-xs">XP</span>
 
                 </div>
@@ -110,38 +100,26 @@
                 <div>
                     <label for="selectedSubclasses" class="block font-medium mb-2">Select Items</label>
                     <select id="selectedSubclasses" class="w-full border rounded p-2" >
-                        
                     </select>
-                </div>
-
-                <button @click="showSelection" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Show Selection
-                </button>
-
-                <div x-show="selectionText" class="mt-4 p-4 border rounded bg-gray-100 whitespace-pre-line">
-                    <span x-text="selectionText"></span>
                 </div>
 
             </div>
 
-            
-    
         </div>
 
         </div>
 
-        
-        <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">    
+        <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">
 
             <div class="max-w-md mx-auto mt-10 pb-8">
                 <div class="flex items-center gap-2">
                     <input
                         type="text"
                         id="searchInput"
-                        class="p-2 flex-1 border border-gray-300 rounded-md 
+                        class="p-2 flex-1 border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Search..."
-                    />
+                    >
                     <button id="undoDelete" type="button" disabled
                         class="border border-gray-300 rounded px-3 py-1.5 text-sm
                         hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
@@ -152,29 +130,18 @@
                 <div
                     id="equipmentList"
                     class=" mt-2 border border-gray-300 rounded-lg bg-white max-h-48 overflow-auto"
-                
-                >      
+                >
+
 
 
                 </div>
             </div>
-        
 
 
         </div>
 
 
-    </div>
-
-
-    
     <script>
-
-        function postEquipmentResults(equipmentResults) {
-            console.log(equipmentResults);
-            
-            var equipmentResutlsDiv = document.getElementById("equipmentList");
-        }
 
         var UNDO_LIMIT = 5;
         var deletedStack = []; // [{ row, count, nextSibling }], LIFO
@@ -266,12 +233,9 @@
         function addItemToInventory(item) {
             console.log("clicked")
 
-            const container = item.parentElement;
-
             const liElement = item;
             liElement.setAttribute("x-data", "{ count: 1 }");
-            liElement.removeAttribute("onclick");
-            // const hiddenItems = Array.from(container.querySelectorAll('p')).filter(p => 
+            // const hiddenItems = Array.from(container.querySelectorAll('p')).filter(p =>
             //     window.getComputedStyle(p).display === 'none'
             // );
 
@@ -284,11 +248,15 @@
             outerDivElement.className = "inventory-item";
             // var span = document.createElement("span");
 
-            var firstDivElement = document.createElement("div");
-            firstDivElement.classList = "";
-
             var secondDivElement = document.createElement("div");
             secondDivElement.className = "w-[30%] flex items-center gap-2 mt-1";
+
+            var dragHandle = document.createElement("span");
+            dragHandle.className = "move cursor-grab text-gray-400 select-none";
+            dragHandle.textContent = "⋮⋮";
+            dragHandle.setAttribute("title", "Drag to reorder");
+            dragHandle.setAttribute("aria-hidden", "true");
+            secondDivElement.appendChild(dragHandle);
 
             var plusButton = document.createElement("button");
             plusButton.setAttribute("x-on:click", "count++");
@@ -309,18 +277,16 @@
             var counterSpan = document.createElement("span");
             counterSpan.setAttribute("x-text", "count");
             counterSpan.className = "text-xl pl-1";
-                        
+
             secondDivElement.appendChild(deleteButton);
             secondDivElement.appendChild(plusButton);
             secondDivElement.appendChild(minusButton);
             secondDivElement.appendChild(counterSpan);
 
             liElement.appendChild(secondDivElement);
-            
+
             outerDivElement.appendChild(liElement);
 
-  
-            
             var list = document.getElementById("listWithHandle");
             list.appendChild(outerDivElement);
         }
@@ -340,30 +306,6 @@
             }
         }
 
-        async function getJsonData(url, name) {
-
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                throw new Error('Network response was not ok ' + response.statusText);
-                }
-                    const data = await response.json();
-                    localStorage.setItem(name, JSON.stringify(data));
-                    console.log(`Stored ${name} in localStorage.`);
-            } catch (error) {
-                console.error('There was a problem with the fetch operation:', error);
-            }
-        }
-
-        function tooltip (element) {
-
-            // console.log("hey")
-
-            // Popper.createPopper(this, tooltip, {
-            //     placement: 'right',
-            // });
-        }
-
         async function startup () {
 
             const itemsBaseJsonUrl = "https://raw.githubusercontent.com/5etools-mirror-3/5etools-2014-src/refs/heads/main/data/items.json"
@@ -372,9 +314,9 @@
 
             if (!localStorage.getItem("equipmentJson")) {
 
-                // (async () => {   
+                // (async () => {
                     await getJsonData(itemsBaseJsonUrl, 'equipmentJson');
-                // })();                
+                // })();
 
             } else {
                 console.log("equipmentJson already in local storage");
@@ -384,61 +326,59 @@
 
                 // (async () => {
                     await getJsonData(classesLookupJsonUrl, 'classesLookupJson');
-                // })();                
+                // })();
 
             } else {
                 console.log("classesLookupJson already in local storage");
             };
 
-            const classesLookupJson = JSON.parse(localStorage.getItem("classesLookupJson"));
-            const equipmentJson = JSON.parse(localStorage.getItem("equipmentJson"));
+            const equipmentJson = JSON.parse(localStorage.getItem("equipmentJson")) ?? { item: [] };
 
             const fuse = new Fuse(equipmentJson.item, options);
-            
+
             const equipmentSearchInput = document.getElementById('searchInput');
             const equipmentResultsDiv = document.getElementById('equipmentList');
 
 
             equipmentSearchInput.addEventListener('input', () => {
                 const query = equipmentSearchInput.value;
-                equipmentResultsDiv.innerHTML = '';
+                const filtered = fuse.search(query);
 
-                // if (query) {
-                    // console.log(query);
-                // };
+                const ul = document.createElement('ul');
+                ul.className = 'pl-5 space-y-3 text-gray-700 list-disc marker:text-blue-500 max-w-md mx-auto';
 
-                var filtered = JSON.stringify(fuse.search(query));
-                filtered = JSON.parse(filtered);
-                console.log(filtered);
+                filtered.forEach(result => {
+                    const item = result.item;
+                    const li = document.createElement('li');
+                    li.className = 'p-2 rounded hover:bg-blue-100 cursor-pointer';
+                    li.setAttribute('basicRules', String(item.basicRules));
+                    li.setAttribute('source', String(item.source));
+                    li.setAttribute('description', String(item.entries));
+                    li.setAttribute('page', String(item.page));
+                    li.setAttribute('rarity', String(item.rarity));
+                    li.setAttribute('srd', String(item.srd));
+                    li.setAttribute('type', String(item.type));
+                    li.setAttribute('value', String(item.value));
+                    li.setAttribute('weight', String(item.weight));
+                    li.setAttribute('miscTags', String(item.miscTags));
 
-                html = filtered.map(item => `
-                    <li 
-                        onmouseover="tooltip(this)"
-                        class="p-2 rounded hover:bg-blue-100 cursor-pointer" 
-                        onclick=addItemToInventory(this) 
-                        basicRules="${item.item.basicRules}" 
-                        source="${item.source}" 
-                        description=${item.entries}
-                        page="${item.page}" 
-                        rarity="${item.rarity}" 
-                        srd="${item.srd}" 
-                        type="${item.type}" 
-                        value="${item.value}" 
-                        weight="${item.weight}" 
-                        miscTags="${item.miscTags}">
-                        ${item.item.name}
-                        <span class="text-gray-500 text-xs">(${item.item.source}) </span>
-                    </li>
+                    li.textContent = item.name;
+                    const sourceSpan = document.createElement('span');
+                    sourceSpan.className = 'text-gray-500 text-xs';
+                    sourceSpan.textContent = ' (' + item.source + ') ';
+                    li.appendChild(sourceSpan);
 
-                `).join('');
-                equipmentResultsDiv.innerHTML = '';
-                equipmentResultsDiv.innerHTML += `
-                    <ul id="styledList" class="pl-5 space-y-3 text-gray-700 list-disc marker:text-blue-500 max-w-md mx-auto">
-                `
-                equipmentResultsDiv.innerHTML += html;
-                equipmentResultsDiv.innerHTML += `
-                    </ul>
-                `;
+                    ul.appendChild(li);
+                });
+
+                equipmentResultsDiv.replaceChildren(ul);
+            });
+
+            equipmentResultsDiv.addEventListener('click', (e) => {
+                const li = e.target.closest('li');
+                if (li && equipmentResultsDiv.contains(li)) {
+                    addItemToInventory(li);
+                }
             });
         }
         // window.onload = function() {
@@ -446,7 +386,7 @@
         async function listInit () {
 
         }
-        
+
         // const baseUrl = "https://raw.githubusercontent.com/";
         // const pathUrl = "5etools-mirror-3/5etools-2014-src/refs/heads/main/data/";
 
@@ -480,8 +420,9 @@
             minMatchCharLength: 1,      // allow small substrings
         };
 
-        Sortable.create(listWithHandle, {
+        Sortable.create(document.getElementById("listWithHandle"), {
             handle: '.move',
+            draggable: '.inventory-item',
             animation: 150
         });
 
@@ -491,7 +432,6 @@
 
 
 
-        
 
     </script>
 

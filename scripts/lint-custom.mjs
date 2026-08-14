@@ -515,6 +515,9 @@ const rules = [
           const name = m.match[1];
           const key = m.match[2];
           const after = block.text.slice(m.index + m.match[0].length);
+          // A `?? <default>` / `|| <default>` immediately after the JSON.parse(...)
+          // is a guard against a null/undefined result.
+          if (/^\s*(?:\?\?|\|\|)/.test(after)) continue;
           const windowText = after.split("\n").slice(0, 5).join("\n");
           const derefRe = new RegExp(`\\b${escapeRe(name)}\\.([A-Za-z_$][\\w$]*)`);
           let dm;

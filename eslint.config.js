@@ -53,8 +53,7 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       ...noUnsanitizedRules,
-      "no-unused-vars": ["error", { varsIgnorePattern: "^(tooltip|showSelection|selectionText|addItemToInventory)$" }],
-      "no-implicit-globals": "error",
+      "no-implicit-globals": "off", // app's inline script intentionally uses top-level (global) functions
       "no-redeclare": "error",
     },
   },

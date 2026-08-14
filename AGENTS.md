@@ -82,13 +82,16 @@ Requires Node 22+.
 
 ### App quirks relevant to tests
 
-- `#selectedSubclasses` is never populated; `classesLookupJson` is unused.
-- Search-result `<li>` only renders `name`/`source` correctly; other attributes
-  (`rarity`, `type`, `value`, `weight`, …) read the wrong path and show `undefined`.
-  Assert on visible text, not attributes.
+- `#selectedSubclasses` is never populated; `classesLookupJson` is fetched and
+  cached but otherwise unused.
+- Search-result rows read attributes from `result.item.*` (the Fuse result's `.item` field), but
+  `entries` is an array in the 5etools schema (renders as joined `[object Object]`),
+  so assert on visible text (`name`/`source`), not `description`.
 
 ## Conventions & Constraints
 
 - Edit `main.html` directly; no build step for the app.
 - App JS is inline in one `<script>` block (no ES modules); test files use ESM.
+- App JS is intentionally top-level (global) in the inline `<script>`; ESLint's
+  `no-implicit-globals` is disabled for it.
 - Version control is git only (`.jj/` present but unused).
