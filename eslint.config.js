@@ -31,7 +31,7 @@ export default [
   },
 
   {
-    files: ["scripts/**/*.js", "*.config.js"],
+    files: ["scripts/**/*.{js,mjs}", "*.config.js"],
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: "module",

@@ -39,7 +39,7 @@
 
         <div id="name-container" class="flex items-start pt-4 pb-4 ">
 
-            <input type="text" placeholder="Name"
+            <input type="text" placeholder="Name" aria-label="Name"
             class="w-1/3 text-xl p-2 border border-gray-300 rounded-md
             focus:outline-none
             focus:ring-2 focus:ring-blue-500">
@@ -48,6 +48,7 @@
                 <div class="w-1/3 flex flex-col space-y-1 pr-2">
                     <input
                         type="text"
+                        aria-label="Class & Level"
                         class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder=""
                     >
@@ -55,6 +56,7 @@
 
                     <input
                         type="text"
+                        aria-label="Race"
                         class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder=""
                     >
@@ -65,6 +67,7 @@
                 <div class="w-1/3 flex flex-col space-y-1 pr-2">
                     <input
                         type="text"
+                        aria-label="Background"
                         class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder=""
                     >
@@ -72,6 +75,7 @@
 
                     <input
                         type="text"
+                        aria-label="Alignment"
                         class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder=""
                     >
@@ -82,6 +86,7 @@
                 <div class="w-1/3 flex flex-col space-y-1 pr-2">
                     <input
                         type="text"
+                        aria-label="Player Name"
                         class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder=""
                     >
@@ -89,6 +94,7 @@
 
                     <input
                         type="text"
+                        aria-label="XP"
                         class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder=""
                     >
@@ -98,25 +104,20 @@
 
             </div>
 
-            <div>
-
-                <div class="max-w-md mx-auto space-y-6">
-                <div>
-                    <label for="selectedClasses" class="block font-medium mb-2" >Select Categories</label>
-                    <select id="selectedClasses" class="w-full border rounded p-2" >
-                    </select>
-                </div>
-
-                <div>
-                    <label for="selectedSubclasses" class="block font-medium mb-2">Select Items</label>
-                    <select id="selectedSubclasses" class="w-full border rounded p-2" >
-                    </select>
-                </div>
-
-            </div>
-
         </div>
 
+        <div class="max-w-md mx-auto space-y-6 mb-4">
+            <div>
+                <label for="selectedClasses" class="block font-medium mb-2">Class</label>
+                <select id="selectedClasses" class="w-full border rounded p-2">
+                </select>
+            </div>
+
+            <div>
+                <label for="selectedSubclasses" class="block font-medium mb-2">Subclass</label>
+                <select id="selectedSubclasses" class="w-full border rounded p-2">
+                </select>
+            </div>
         </div>
 
         <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">
@@ -126,6 +127,7 @@
                     <input
                         type="text"
                         id="searchInput"
+                        aria-label="Search equipment"
                         class="p-2 flex-1 border border-gray-300 rounded-md
                         focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Search..."
@@ -177,16 +179,6 @@
             return 1; // matches x-data="{ count: 1 }" initial value
         }
 
-        function setRowCount(row, count) {
-            try {
-                if (row && window.Alpine && Alpine.$data(row)) {
-                    Alpine.$data(row).count = count;
-                }
-            } catch (err) {
-                console.warn("setRowCount: could not restore count", err);
-            }
-        }
-
         function removeInventoryItem(button) {
             var row = button.closest(".inventory-item");
             if (!row) {
@@ -211,23 +203,17 @@
         function undoDelete() {
             if (deletedStack.length === 0) return;
             var entry = deletedStack.pop();
+            var restoredRow = entry.row;
+            restoredRow.setAttribute("x-data", JSON.stringify({ count: entry.count }));
             var list = document.getElementById("listWithHandle");
             if (entry.nextSibling && entry.nextSibling.parentNode === list) {
-                list.insertBefore(entry.row, entry.nextSibling);
+                list.insertBefore(restoredRow, entry.nextSibling);
             } else {
                 // Row was last when deleted, or its saved sibling was itself
                 // deleted since. Append at the end; order among surviving rows
                 // is always preserved.
-                list.appendChild(entry.row);
+                list.appendChild(restoredRow);
             }
-            // Alpine re-initializes components when re-attached (MutationObserver
-            // -> initTree), resetting count to 1. The MO notification microtask
-            // is queued at insertBefore time, BEFORE this microtask, so Alpine's
-            // re-init runs first; Alpine's reactive effect flush is a later
-            // microtask that reads the value we set here.
-            queueMicrotask(function () {
-                setRowCount(entry.row, entry.count);
-            });
             updateUndoButton();
         }
 
@@ -264,7 +250,7 @@
             firstDivElement.className = "";
 
             var controls = document.createElement("div");
-            controls.className = "w-[30%] flex items-center gap-2 mt-1";
+            controls.className = "flex items-center gap-2 mt-1";
 
             var dragHandle = document.createElement("span");
             dragHandle.className = "move cursor-grab text-gray-400 select-none";
@@ -291,7 +277,7 @@
 
             var counterSpan = document.createElement("span");
             counterSpan.setAttribute("x-text", "count");
-            counterSpan.className = "text-xl pl-1";
+            counterSpan.className = "text-xl pl-1 tabular-nums";
 
             controls.appendChild(deleteButton);
             controls.appendChild(plusButton);
@@ -334,6 +320,16 @@
             //     placement: 'right',
             // });
         }
+
+        const options = {
+            includeScore: true,
+            keys: ['name'],
+            threshold: 0.3,
+            shouldSort: true,
+            isCaseSensitive: false,
+            ignoreLocation: true,
+            minMatchCharLength: 1,      // allow small substrings
+        };
 
         async function startup () {
 
@@ -391,25 +387,21 @@
 
             equipmentSearchInput.addEventListener('input', () => {
                 const query = equipmentSearchInput.value;
-                const filtered = fuse.search(query);
 
                 const ul = document.createElement('ul');
                 ul.className = 'pl-5 space-y-3 text-gray-700 list-disc marker:text-blue-500 max-w-md mx-auto';
+
+                if (!query.trim()) {
+                    equipmentResultsDiv.replaceChildren(ul);
+                    return;
+                }
+
+                const filtered = fuse.search(query).slice(0, 100);
 
                 filtered.forEach(result => {
                     const item = result.item;
                     const li = document.createElement('li');
                     li.className = 'p-2 rounded hover:bg-blue-100 cursor-pointer';
-                    li.setAttribute('basicRules', String(item.basicRules));
-                    li.setAttribute('source', String(item.source));
-                    li.setAttribute('description', String(item.entries));
-                    li.setAttribute('page', String(item.page));
-                    li.setAttribute('rarity', String(item.rarity));
-                    li.setAttribute('srd', String(item.srd));
-                    li.setAttribute('type', String(item.type));
-                    li.setAttribute('value', String(item.value));
-                    li.setAttribute('weight', String(item.weight));
-                    li.setAttribute('miscTags', String(item.miscTags));
 
                     li.textContent = item.name;
                     const sourceSpan = document.createElement('span');
@@ -458,16 +450,6 @@
             select.appendChild(option);
         });
 
-
-        const options = {
-            includeScore: true,
-            keys: ['name'],
-            threshold: 0.3,
-            shouldSort: true,
-            isCaseSensitive: false,
-            ignoreLocation: true,
-            minMatchCharLength: 1,      // allow small substrings
-        };
 
         Sortable.create(document.getElementById("listWithHandle"), {
             handle: '.move',
