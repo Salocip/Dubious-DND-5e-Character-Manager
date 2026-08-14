@@ -134,13 +134,21 @@
         <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">    
 
             <div class="max-w-md mx-auto mt-10 pb-8">
-                <input
-                    type="text"
-                    id="searchInput"
-                    class="p-2 w-100 border border-gray-300 rounded-md 
-                    focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search..."
-                />
+                <div class="flex items-center gap-2">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        class="p-2 flex-1 border border-gray-300 rounded-md 
+                        focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Search..."
+                    />
+                    <button id="undoDelete" type="button" disabled
+                        class="border border-gray-300 rounded px-3 py-1.5 text-sm
+                        hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer
+                        whitespace-nowrap">
+                        Undo
+                    </button>
+                </div>
                 <div
                     id="equipmentList"
                     class=" mt-2 border border-gray-300 rounded-lg bg-white max-h-48 overflow-auto"
@@ -168,6 +176,93 @@
             var equipmentResutlsDiv = document.getElementById("equipmentList");
         }
 
+        var UNDO_LIMIT = 5;
+        var deletedStack = []; // [{ row, count, nextSibling }], LIFO
+
+        function getRowCount(row) {
+            try {
+                var li = row.querySelector("li");
+                if (li && window.Alpine && Alpine.$data(li)) {
+                    var data = Alpine.$data(li);
+                    if (typeof data.count === "number") {
+                        return data.count;
+                    }
+                }
+            } catch (err) {
+                console.warn("getRowCount: could not read count", err);
+            }
+            return 1; // matches x-data="{ count: 1 }" initial value
+        }
+
+        function setRowCount(row, count) {
+            try {
+                var li = row.querySelector("li");
+                if (li && window.Alpine && Alpine.$data(li)) {
+                    Alpine.$data(li).count = count;
+                }
+            } catch (err) {
+                console.warn("setRowCount: could not restore count", err);
+            }
+        }
+
+        function removeInventoryItem(button) {
+            var row = button.closest(".inventory-item");
+            if (!row) {
+                console.warn("removeInventoryItem: no .inventory-item ancestor found", button);
+                return;
+            }
+            var nextSibling = row.nextElementSibling;
+            deletedStack.push({ row: row, count: getRowCount(row), nextSibling: nextSibling });
+            if (deletedStack.length > UNDO_LIMIT) {
+                deletedStack.shift();
+            }
+            row.remove();
+            updateUndoButton();
+        }
+
+        function updateUndoButton() {
+            var btn = document.getElementById("undoDelete");
+            if (!btn) return;
+            btn.disabled = deletedStack.length === 0;
+        }
+
+        function undoDelete() {
+            if (deletedStack.length === 0) return;
+            var entry = deletedStack.pop();
+            var list = document.getElementById("listWithHandle");
+            if (entry.nextSibling && entry.nextSibling.parentNode === list) {
+                list.insertBefore(entry.row, entry.nextSibling);
+            } else {
+                // Row was last when deleted, or its saved sibling was itself
+                // deleted since. Append at the end; order among surviving rows
+                // is always preserved.
+                list.appendChild(entry.row);
+            }
+            // Alpine re-initializes components when re-attached (MutationObserver
+            // -> initTree), resetting count to 1. The MO notification microtask
+            // is queued at insertBefore time, BEFORE this microtask, so Alpine's
+            // re-init runs first; Alpine's reactive effect flush is a later
+            // microtask that reads the value we set here.
+            queueMicrotask(function () {
+                setRowCount(entry.row, entry.count);
+            });
+            updateUndoButton();
+        }
+
+        function attachDeleteListener() {
+            document.getElementById("listWithHandle").addEventListener("click", function (e) {
+                var undoBtn = e.target.closest("#undoDelete");
+                if (undoBtn) {
+                    undoDelete();
+                    return;
+                }
+                var delBtn = e.target.closest('[aria-label="Remove item"]');
+                if (delBtn) removeInventoryItem(delBtn);
+            });
+        }
+        attachDeleteListener();
+        updateUndoButton();
+
         function addItemToInventory(item) {
             console.log("clicked")
 
@@ -186,30 +281,36 @@
             console.log(liElement);
 
             var outerDivElement = document.createElement("div");
-            outerDivElement.classList = ""
+            outerDivElement.className = "inventory-item";
             // var span = document.createElement("span");
 
             var firstDivElement = document.createElement("div");
             firstDivElement.classList = "";
 
             var secondDivElement = document.createElement("div");
-            secondDivElement.classList = "w-[30%]";
+            secondDivElement.className = "w-[30%] flex items-center gap-2 mt-1";
 
             var plusButton = document.createElement("button");
             plusButton.setAttribute("x-on:click", "count++");
             plusButton.textContent = " + ";
-            plusButton.classList = "border border-gray-400 rounded px-3 py-1.5 ml-1 hover:bg-blue-100 text-lg cursor-pointer";
+            plusButton.className = "border border-gray-400 rounded px-3 py-1.5 hover:bg-blue-100 text-lg cursor-pointer";
 
             var minusButton = document.createElement("button");
             minusButton.setAttribute("x-on:click", "if (count > 0) count--");
             minusButton.textContent = " - ";
-            minusButton.classList = "border border-gray-400 rounded px-3 py-1.5 ml-1 hover:bg-blue-100 text-lg cursor-pointer";
+            minusButton.className = "border border-gray-400 rounded px-3 py-1.5 hover:bg-blue-100 text-lg cursor-pointer";
+
+            var deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.textContent = "×";
+            deleteButton.setAttribute("aria-label", "Remove item");
+            deleteButton.className = "border border-red-400 text-red-600 rounded px-2 py-1 hover:bg-red-100 text-lg cursor-pointer leading-none";
 
             var counterSpan = document.createElement("span");
-            counterSpan.setAttribute("x-text:", "count");
-            counterSpan.textContent = 0;
-            counterSpan.classList = "text-xl pl-1"
+            counterSpan.setAttribute("x-text", "count");
+            counterSpan.className = "text-xl pl-1";
                         
+            secondDivElement.appendChild(deleteButton);
             secondDivElement.appendChild(plusButton);
             secondDivElement.appendChild(minusButton);
             secondDivElement.appendChild(counterSpan);

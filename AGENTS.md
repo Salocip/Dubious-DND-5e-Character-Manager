@@ -7,6 +7,16 @@
   diagnostics.
 - **Specifications live in `docs/`.** D&D 5e rules/spec data is in `docs/book-phb.json`
   (PHB, 5etools schema). Read there before guessing rule content.
+- **Alpine.js docs are vendored locally.** The full Alpine.js 3 documentation is
+  in `docs/alpine js/` (gitignored, local-only): one `.md` per section —
+  `start-here.md`, `upgrade-guide.md`, plus `essentials/`, `directives/`,
+  `magics/`, `globals/`, `plugins/`, `advanced/` (each section has a summary
+  `.md` at the top level and a folder with the per-page docs). ALWAYS consult
+  these docs when in doubt about Alpine.js behavior — directives, magics,
+  lifecycle, reactivity — before guessing or asking. For deep source-level
+  questions, the Alpine.js source checkout lives at
+  `/home/tom/Projects/alpine/` (parser/mutation internals in
+  `packages/alpinejs/src/`).
 
 ## Project Overview
 
