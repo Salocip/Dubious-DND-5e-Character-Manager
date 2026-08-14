@@ -13,7 +13,8 @@
     "lint": "eslint main.html tests scripts eslint.config.js && html-validate main.html && node scripts/lint-custom.mjs main.html",
     "lint:eslint": "eslint main.html tests",
     "lint:html": "html-validate main.html",
-    "lint:custom": "node scripts/lint-custom.mjs main.html"
+    "lint:custom": "node scripts/lint-custom.mjs main.html",
+    "check": "npm run lint:html && npm test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

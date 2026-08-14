@@ -156,7 +156,7 @@
         function postEquipmentResults(equipmentResults) {
             console.log(equipmentResults);
 
-            var equipmentResutlsDiv = document.getElementById("equipmentList");
+            var equipmentResultsDiv = document.getElementById("equipmentList");
         }
 
         var UNDO_LIMIT = 5;
@@ -164,9 +164,8 @@
 
         function getRowCount(row) {
             try {
-                var li = row.querySelector("li");
-                if (li && window.Alpine && Alpine.$data(li)) {
-                    var data = Alpine.$data(li);
+                if (row && window.Alpine && Alpine.$data(row)) {
+                    var data = Alpine.$data(row);
                     if (typeof data.count === "number") {
                         return data.count;
                     }
@@ -174,14 +173,14 @@
             } catch (err) {
                 console.warn("getRowCount: could not read count", err);
             }
+            console.warn("getRowCount: count unavailable, defaulting to 1", row);
             return 1; // matches x-data="{ count: 1 }" initial value
         }
 
         function setRowCount(row, count) {
             try {
-                var li = row.querySelector("li");
-                if (li && window.Alpine && Alpine.$data(li)) {
-                    Alpine.$data(li).count = count;
+                if (row && window.Alpine && Alpine.$data(row)) {
+                    Alpine.$data(row).count = count;
                 }
             } catch (err) {
                 console.warn("setRowCount: could not restore count", err);
@@ -247,38 +246,32 @@
         updateUndoButton();
 
         function addItemToInventory(item) {
-            console.log("clicked")
+            const container = item.parentElement; // KEPT dead code
 
-            const container = item.parentElement;
+            // Build the row fully detached, with x-data set BEFORE attach so
+            // Alpine initializes it in one well-defined step (no reliance on
+            // attribute-mutation + childList ordering on a live node).
+            var row = document.createElement("div");
+            row.className = "inventory-item";
+            row.setAttribute("x-data", "{ count: 1 }");
 
-            const liElement = item;
-            liElement.setAttribute("x-data", "{ count: 1 }");
-            // const hiddenItems = Array.from(container.querySelectorAll('p')).filter(p =>
-            //     window.getComputedStyle(p).display === 'none'
-            // );
+            var nameSpan = document.createElement("span");
+            nameSpan.className = "item-name";
+            nameSpan.textContent = item.textContent.trim();
+            row.appendChild(nameSpan);
 
-            // properties = [];
-            // properties.push(item.textContent.trim());
+            var firstDivElement = document.createElement("div"); // KEPT dead code
+            firstDivElement.className = "";
 
-            console.log(liElement);
-
-            var outerDivElement = document.createElement("div");
-            outerDivElement.className = "inventory-item";
-
-            var firstDivElement = document.createElement("div");
-            firstDivElement.classList = "";
-
-            // var span = document.createElement("span");
-
-            var secondDivElement = document.createElement("div");
-            secondDivElement.className = "w-[30%] flex items-center gap-2 mt-1";
+            var controls = document.createElement("div");
+            controls.className = "w-[30%] flex items-center gap-2 mt-1";
 
             var dragHandle = document.createElement("span");
             dragHandle.className = "move cursor-grab text-gray-400 select-none";
             dragHandle.textContent = "⋮⋮";
             dragHandle.setAttribute("title", "Drag to reorder");
             dragHandle.setAttribute("aria-hidden", "true");
-            secondDivElement.appendChild(dragHandle);
+            controls.appendChild(dragHandle);
 
             var plusButton = document.createElement("button");
             plusButton.setAttribute("x-on:click", "count++");
@@ -300,47 +293,37 @@
             counterSpan.setAttribute("x-text", "count");
             counterSpan.className = "text-xl pl-1";
 
-            secondDivElement.appendChild(deleteButton);
-            secondDivElement.appendChild(plusButton);
-            secondDivElement.appendChild(minusButton);
-            secondDivElement.appendChild(counterSpan);
+            controls.appendChild(deleteButton);
+            controls.appendChild(plusButton);
+            controls.appendChild(minusButton);
+            controls.appendChild(counterSpan);
 
-            liElement.appendChild(secondDivElement);
+            row.appendChild(controls);
 
-            outerDivElement.appendChild(liElement);
+            document.getElementById("listWithHandle").appendChild(row);
 
-            var list = document.getElementById("listWithHandle");
-            list.appendChild(outerDivElement);
+            // Remove the source search result so "add" keeps its move semantics
+            // (the result leaves the list) while the inventory row is a clean,
+            // valid <div> rather than a moved <li>.
+            item.remove();
         }
 
         async function getJsonData(url, name) {
-
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
+            const response = await fetch(url);
+            if (!response.ok) {
                 throw new Error('Network response was not ok ' + response.statusText);
-                }
-                    const data = await response.json();
-                    localStorage.setItem(name, JSON.stringify(data));
-                    console.log(`Stored ${name} in localStorage.`);
-            } catch (error) {
-                console.error('There was a problem with the fetch operation:', error);
             }
+            const data = await response.json();
+            localStorage.setItem(name, JSON.stringify(data));
         }
 
         async function getJsonData(url, name) {
-
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
+            const response = await fetch(url);
+            if (!response.ok) {
                 throw new Error('Network response was not ok ' + response.statusText);
-                }
-                    const data = await response.json();
-                    localStorage.setItem(name, JSON.stringify(data));
-                    console.log(`Stored ${name} in localStorage.`);
-            } catch (error) {
-                console.error('There was a problem with the fetch operation:', error);
             }
+            const data = await response.json();
+            localStorage.setItem(name, JSON.stringify(data));
         }
 
         function tooltip (element) {
@@ -359,33 +342,51 @@
 
 
             if (!localStorage.getItem("equipmentJson")) {
-
-                // (async () => {
+                try {
                     await getJsonData(itemsBaseJsonUrl, 'equipmentJson');
-                // })();
-
-            } else {
-                console.log("equipmentJson already in local storage");
-            };
+                } catch (error) {
+                    console.error('Failed to fetch equipment data:', error);
+                }
+            }
 
             if (!localStorage.getItem("classesLookupJson")) {
-
-                // (async () => {
+                try {
                     await getJsonData(classesLookupJsonUrl, 'classesLookupJson');
-                // })();
+                } catch (error) {
+                    console.error('Failed to fetch classes lookup data:', error);
+                }
+            }
 
-            } else {
-                console.log("classesLookupJson already in local storage");
-            };
+            // KEPT dead code: classesLookupJson parse (now guarded against corrupt cache)
+            let classesLookupJson = {};
+            try {
+                classesLookupJson = JSON.parse(localStorage.getItem("classesLookupJson")) ?? {};
+            } catch (error) {
+                console.error('Corrupt classesLookupJson cache:', error);
+            }
 
-            const classesLookupJson = JSON.parse(localStorage.getItem("classesLookupJson"));
+            let equipmentItems = [];
+            try {
+                const equipmentJson = JSON.parse(localStorage.getItem("equipmentJson"));
+                if (equipmentJson && Array.isArray(equipmentJson.item)) {
+                    equipmentItems = equipmentJson.item;
+                }
+            } catch (error) {
+                console.error('Corrupt equipmentJson cache, clearing:', error);
+                localStorage.removeItem("equipmentJson");
+            }
 
-            const equipmentJson = JSON.parse(localStorage.getItem("equipmentJson")) ?? { item: [] };
-
-            const fuse = new Fuse(equipmentJson.item, options);
+            const fuse = new Fuse(equipmentItems, options);
 
             const equipmentSearchInput = document.getElementById('searchInput');
             const equipmentResultsDiv = document.getElementById('equipmentList');
+
+            if (equipmentItems.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = 'p-2 text-sm text-gray-500';
+                emptyMsg.textContent = 'No equipment data loaded. Check your connection and reload the page.';
+                equipmentResultsDiv.replaceChildren(emptyMsg);
+            }
 
 
             equipmentSearchInput.addEventListener('input', () => {
@@ -474,7 +475,9 @@
             animation: 150
         });
 
-        startup();
+        startup().catch(function (error) {
+            console.error('startup failed:', error);
+        });
 
         listInit();
 
