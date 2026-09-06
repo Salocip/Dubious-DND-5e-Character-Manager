@@ -49,8 +49,8 @@
                     </div>
                     <div class="w-2/3 grid grid-cols-3 gap-2">
                         <div class="flex flex-col space-y-1">
-                            <input type="text" aria-label="Class & Level" placeholder=""
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="text" id="classLevelDisplay" aria-label="Class & Level" placeholder="" readonly
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100">
                             <span class="text-xs text-gray-500 uppercase">Class &amp; Level</span>
                         </div>
                         <div class="flex flex-col space-y-1">
@@ -99,7 +99,7 @@
             <!-- 2. Class & Subclass -->
             <section class="py-4 border-b border-gray-200">
                 <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Class &amp; Subclass</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="flex flex-col space-y-1">
                         <label for="selectedClasses" class="text-xs text-gray-500 uppercase">Class</label>
                         <select id="selectedClasses" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -109,6 +109,11 @@
                         <label for="selectedSubclasses" class="text-xs text-gray-500 uppercase">Subclass</label>
                         <select id="selectedSubclasses" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label for="classLevel" class="text-xs text-gray-500 uppercase">Level</label>
+                        <input type="number" id="classLevel" min="1" max="20" value="1"
+                            class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
             </section>
@@ -1304,6 +1309,15 @@
 
         const select = document.getElementById('selectedClasses');
         const subclassSelect = document.getElementById('selectedSubclasses');
+        const levelInput = document.getElementById('classLevel');
+        const classLevelDisplay = document.getElementById('classLevelDisplay');
+
+        function updateClassLevelDisplay() {
+            const cls = select.value ? select.value.replace(/\s+\([^)]+\)$/, '') : '';
+            const sub = subclassSelect.value || '';
+            const lvl = levelInput.value || '';
+            classLevelDisplay.value = [cls, sub, lvl ? 'Lv ' + lvl : ''].filter(Boolean).join(' · ');
+        }
 
         classes.forEach(cls => {
             const option = document.createElement('option');
@@ -1335,7 +1349,10 @@
                 option.textContent = subs[key].name || key;
                 subclassSelect.appendChild(option);
             });
+            updateClassLevelDisplay();
         });
+        subclassSelect.addEventListener('change', updateClassLevelDisplay);
+        levelInput.addEventListener('input', updateClassLevelDisplay);
 
 
         Sortable.create(document.getElementById("listWithHandle"), {
