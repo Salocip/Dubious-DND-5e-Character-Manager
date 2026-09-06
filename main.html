@@ -237,6 +237,17 @@
                 <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Features &amp; Traits</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                        <span class="text-xs text-gray-500 uppercase">Class &amp; Subclass Features</span>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <template x-for="f in allFeaturesForLevel()" :key="(f.isSubclass ? 's' : 'c') + f.level + '-' + f.name">
+                                <li>
+                                    <span class="font-medium" x-text="(f.isSubclass ? 'Level ' + f.level + ': ' : '') + f.name"></span>
+                                    <div class="text-sm text-gray-600" x-text="f.text"></div>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                    <div>
                         <span class="text-xs text-gray-500 uppercase">Racial Traits</span>
                         <ul class="list-disc pl-5 space-y-1">
                             <template x-for="t in character.traits" :key="t.name"><li class="font-medium" x-text="t.name"></li></template>
@@ -247,7 +258,7 @@
                         </div>
                     </div>
                     <div>
-                        <span class="text-xs text-gray-500 uppercase" x-text="'Feature: ' + character.bgFeature.name"></span>
+                        <span class="text-xs text-gray-500 uppercase" x-show="character.bgFeature.name" x-text="'Feature: ' + character.bgFeature.name"></span>
                         <div x-text="character.bgFeature.text"></div>
                         <div class="mt-2 text-sm">
                             <span class="text-xs text-gray-500 uppercase">Background Equipment</span>
@@ -723,6 +734,8 @@
                 subraces: [],
                 backgrounds: [],
                 feats: [],
+                classFeatures: [],
+                subclassFeatures: [],
             });
 
             Alpine.data('characterState', () => ({
@@ -808,11 +821,15 @@
 
                 init() {
                     this.seedFromCache();
-                    this.loadCharacter();
                     this.$watch('character.race', () => this.onRaceChange());
                     this.$watch('character.subrace', () => this.onSubraceChange());
                     this.$watch('character.background', () => this.recomputeBackground());
                     this.$watch('character.asiChoices', () => this.recompute());
+                    this.loadCharacter();
+                    // Recompute for values already set by a saved character, since
+                    // the $watch handlers above only fire on later changes.
+                    this.recompute();
+                    this.recomputeBackground();
                 },
 
                 seedFromCache() {
@@ -871,6 +888,31 @@
                 get subraces() { return this.$store.characterData.subraces; },
                 get backgrounds() { return this.$store.characterData.backgrounds; },
                 get feats() { return this.$store.characterData.feats; },
+                get classFeatures() { return this.$store.characterData.classFeatures; },
+                get subclassFeatures() { return this.$store.characterData.subclassFeatures; },
+
+                // Class features earned at or below the current level, in level order.
+                classFeaturesForLevel() {
+                    const lvl = Number(this.character.level) || 1;
+                    return this.classFeatures
+                        .filter((f) => f.level <= lvl)
+                        .sort((a, b) => a.level - b.level);
+                },
+
+                // Class + chosen-subclass features at or below the current level,
+                // merged in level order (stable within a level: class first).
+                // Subclass features render with a "Level N:" prefix like 5etools.
+                allFeaturesForLevel() {
+                    const lvl = Number(this.character.level) || 1;
+                    const sub = this.subclassFeatures
+                        .filter((f) => f.level <= lvl)
+                        .map((f) => ({ name: f.name, level: f.level, text: f.text, isSubclass: true }));
+                    return this.classFeatures
+                        .filter((f) => f.level <= lvl)
+                        .map((f) => ({ name: f.name, level: f.level, text: f.text, isSubclass: false }))
+                        .concat(sub)
+                        .sort((a, b) => a.level - b.level || (a.isSubclass ? 1 : 0) - (b.isSubclass ? 1 : 0));
+                },
 
                 availableSubraces() {
                     return this.character.race
@@ -1238,12 +1280,23 @@
                     if (val > max) a.base = max;
                 },
 
+                // Max feats a character may take: one per ASI earned (forgoing the
+                // ASI to take a feat instead, PHB ch.6), plus one for the Variant
+                // Human 1st-level feat.
+                featLimit() {
+                    const asi = Number(this.character.asiCount) || 0;
+                    const sub = this.selectedSubraceObj();
+                    const variantHuman = !!(sub && sub.name === 'Variant' && sub.raceName === 'Human');
+                    return asi + (variantHuman ? 1 : 0);
+                },
+
                 // Add/remove a feat, blocking the add when it would push the budget
-                // below 0 (each feat costs 2 points). Resets the checkbox element so
+                // below 0 (each feat costs 2 points) or exceed the feat limit (one
+                // per ASI, plus one for Variant Human). Resets the checkbox element so
                 // a blocked add does not leave it visually checked.
                 toggleFeat(name, checked, target) {
                     if (checked) {
-                        if (this.abilityBudgetRemaining() < 2) {
+                        if (this.abilityBudgetRemaining() < 2 || this.character.feats.length >= this.featLimit()) {
                             if (target) target.checked = false;
                             return;
                         }
@@ -1471,10 +1524,34 @@
             classLevelDisplay.value = [cls, sub, lvl ? 'Lv ' + lvl : ''].filter(Boolean).join(' · ');
         }
 
+        // Extract display text from a 5etools entries array: join string entries
+        // and strip {@...} tags. Typed entries (lists, tables) are skipped — the
+        // leading paragraphs carry the feature description.
+        function featureText(entries) {
+            return (entries || [])
+                .filter(function (e) { return typeof e === "string"; })
+                .map(function (s) {
+                    return s.replace(/\{@[^}]*\}/g, function (m) {
+                        var inner = m.slice(2, -1);
+                        var space = inner.indexOf(" ");
+                        var name = space === -1 ? inner : inner.slice(space + 1);
+                        var pipe = name.indexOf("|");
+                        return (pipe === -1 ? name : name.slice(0, pipe)).trim();
+                    });
+                })
+                .join(" ")
+                .trim();
+        }
+
         // Load the class's ASI schedule (levels at which it grants Ability Score
         // Improvements) from 5etools class/class-<name>.json, cache it, and push the
         // resolved count for the current level into Alpine state so the budget counter
-        // reacts. Cache shape: _v:1 plus className -> array of ASI levels.
+        // reacts. Also pushes the class's PHB features into the store for display.
+        // Cache shape: _v:1 plus className -> {
+        //   levels: number[],
+        //   classFeatures: [{name, level, text}],
+        //   subclassFeatures: { shortName: [{name, level, text}] },
+        // }.
         function loadClassAsi(className) {
             const cacheKey = 'classAsiJson';
             let cache = {};
@@ -1484,18 +1561,40 @@
                 console.error('Corrupt ' + cacheKey + ' cache, clearing:', error);
                 localStorage.removeItem(cacheKey);
             }
-            const apply = function (levels) {
-                cache[className] = levels;
-                cache._v = 1;
+            const apply = function (levels, classFeatures, subclassFeatures) {
+                cache[className] = { levels: levels, classFeatures: classFeatures, subclassFeatures: subclassFeatures };
+                cache._v = 2;
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify(cache));
                 } catch (error) {
                     console.error('Failed to cache class ASI data:', error);
                 }
                 updateAsiCount(levels);
+                if (window.Alpine && Alpine.store) {
+                    const store = Alpine.store('characterData');
+                    if (store) {
+                        store.classFeatures = classFeatures;
+                        pushSubclassFeatures(subclassFeatures);
+                    }
+                }
             };
-            if (Array.isArray(cache[className])) {
-                updateAsiCount(cache[className]);
+            const pushSubclassFeatures = function (subclassFeatures) {
+                if (!window.Alpine || !Alpine.store) return;
+                const store = Alpine.store('characterData');
+                if (!store) return;
+                const shortName = subclassSelect.value;
+                store.subclassFeatures = (subclassFeatures || {})[shortName] || [];
+            };
+            const cached = cache[className];
+            if (cached && cache._v === 2 && Array.isArray(cached.levels)) {
+                updateAsiCount(cached.levels);
+                if (window.Alpine && Alpine.store) {
+                    const store = Alpine.store('characterData');
+                    if (store) {
+                        store.classFeatures = cached.classFeatures || [];
+                        pushSubclassFeatures(cached.subclassFeatures);
+                    }
+                }
                 return;
             }
             const url = DATA_BASE + "class/class-" + className.toLowerCase() + ".json";
@@ -1509,7 +1608,21 @@
                         .filter(function (f) { return f.name === "Ability Score Improvement"; })
                         .map(function (f) { return f.level; })
                         .sort(function (a, b) { return a - b; });
-                    apply(levels);
+                    const classFeatures = (data.classFeature || [])
+                        .filter(function (f) { return f.source === "PHB"; })
+                        .map(function (f) { return { name: f.name, level: f.level, text: featureText(f.entries) }; });
+                    const subclassFeatures = {};
+                    (data.subclassFeature || []).forEach(function (f) {
+                        if (f.source !== "PHB" || !f.subclassShortName) return;
+                        // header >= 1 are the actual features; header-less entries are
+                        // umbrella headers that only reference the real features.
+                        if (f.header === undefined || f.header < 1) return;
+                        if (!subclassFeatures[f.subclassShortName]) subclassFeatures[f.subclassShortName] = [];
+                        subclassFeatures[f.subclassShortName].push({
+                            name: f.name, level: f.level, text: featureText(f.entries),
+                        });
+                    });
+                    apply(levels, classFeatures, subclassFeatures);
                 })
                 .catch(function (error) {
                     console.error('Failed to load class ASI data for ' + className + ':', error);
@@ -1556,17 +1669,37 @@
                 option.textContent = subs[key].name || key;
                 subclassSelect.appendChild(option);
             });
+            // Placeholder keeps the subclass unselected until the user picks one;
+            // without it the first option would auto-select (and auto-display
+            // its features) the moment options are appended.
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select a subclass…';
+            subclassSelect.insertBefore(placeholder, subclassSelect.firstChild);
+            subclassSelect.value = '';
             updateClassLevelDisplay();
             loadClassAsi(className);
         });
-        subclassSelect.addEventListener('change', updateClassLevelDisplay);
+        // Changing the subclass swaps the displayed subclass features from the
+        // cached class data (loadClassAsi has already run for this class).
+        subclassSelect.addEventListener('change', function () {
+            updateClassLevelDisplay();
+            const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
+            if (!match || !window.Alpine || !Alpine.store) return;
+            const cache = JSON.parse(localStorage.getItem('classAsiJson')) ?? {};
+            const entry = cache[match[1]];
+            if (!entry) return;
+            const store = Alpine.store('characterData');
+            if (store) store.subclassFeatures = (entry.subclassFeatures || {})[subclassSelect.value] || [];
+        });
         levelInput.addEventListener('input', function () {
             updateClassLevelDisplay();
             const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
             if (!match) return;
             const cache = JSON.parse(localStorage.getItem('classAsiJson')) ?? {};
-            if (Array.isArray(cache[match[1]])) {
-                updateAsiCount(cache[match[1]]);
+            const entry = cache[match[1]];
+            if (entry && Array.isArray(entry.levels)) {
+                updateAsiCount(entry.levels);
             }
         });
 

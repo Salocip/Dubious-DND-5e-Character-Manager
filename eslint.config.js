@@ -23,7 +23,9 @@ export default [
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: "module",
-      globals: { ...globals.node },
+      // page.evaluate bodies run in the browser context, so browser globals
+      // (document, Alpine, window) are legitimate inside test files.
+      globals: { ...globals.node, ...globals.browser, Alpine: "readonly" },
     },
     rules: {
       ...js.configs.recommended.rules,
