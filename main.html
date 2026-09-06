@@ -913,6 +913,17 @@
                         this.character.classes = [{ id: 1, name: '', subclass: '', level: lvl }];
                         this.character._classSeq = 1;
                     }
+                    // Repair rows saved with NaN ids (pre-fix addClass wrote
+                    // id: NaN, which JSON-serializes to null). Duplicate/null
+                    // x-for keys break Alpine's diffing and rows render empty.
+                    let maxId = 0;
+                    this.character.classes.forEach((c) => {
+                        if (Number.isFinite(c.id)) maxId = Math.max(maxId, c.id);
+                    });
+                    this.character.classes.forEach((c) => {
+                        if (!Number.isFinite(c.id)) c.id = ++maxId;
+                    });
+                    this.character._classSeq = Math.max(this.character._classSeq || 0, maxId);
                     this.recomputeClasses();
                 },
 
@@ -1697,7 +1708,7 @@
         // the data into the store maps so the budget counter and feature list react.
         // className is the BARE class name (e.g. "Barbarian"), NOT the option string
         // "Barbarian (PHB)" — the caller parses the source suffix first.
-        // Cache shape: _v:3 plus className -> {
+        // Cache shape: _v:5 plus className -> {
         //   levels: number[],
         //   classFeatures: [{name, level, text}],
         //   subclassFeatures: { shortName: [{name, level, text}] },
@@ -1714,7 +1725,7 @@
             }
             const apply = function (levels, classFeatures, subclassFeatures, multiclassReqs) {
                 cache[className] = { levels: levels, classFeatures: classFeatures, subclassFeatures: subclassFeatures, multiclassReqs: multiclassReqs };
-                cache._v = 3;
+                cache._v = 5;
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify(cache));
                 } catch (error) {
@@ -1731,7 +1742,7 @@
                 }
             };
             const cached = cache[className];
-            if (cached && cache._v === 3 && Array.isArray(cached.levels)) {
+            if (cached && cache._v === 5 && Array.isArray(cached.levels)) {
                 if (window.Alpine && Alpine.store) {
                     const store = Alpine.store('characterData');
                     if (store) {
@@ -1755,14 +1766,17 @@
                         .map(function (f) { return f.level; })
                         .sort(function (a, b) { return a - b; });
                     const classFeatures = (data.classFeature || [])
-                        .filter(function (f) { return f.source === "PHB"; })
                         .map(function (f) { return { name: f.name, level: f.level, text: featureText(f.entries) }; });
                     const subclassFeatures = {};
                     (data.subclassFeature || []).forEach(function (f) {
-                        if (f.source !== "PHB" || !f.subclassShortName) return;
-                        // header >= 1 are the actual features; header-less entries are
-                        // umbrella headers that only reference the real features.
-                        if (f.header === undefined || f.header < 1) return;
+                        if (!f.subclassShortName) return;
+                        // Skip only umbrella entries: header-less entries whose
+                        // body is just refSubclassFeature references to the real
+                        // features. Everything else (header >= 1, or header-less
+                        // with real text) is a feature to display.
+                        const isUmbrella = f.header === undefined &&
+                            (f.entries || []).some(function (e) { return e && e.type === "refSubclassFeature"; });
+                        if (isUmbrella) return;
                         if (!subclassFeatures[f.subclassShortName]) subclassFeatures[f.subclassShortName] = [];
                         subclassFeatures[f.subclassShortName].push({
                             name: f.name, level: f.level, text: featureText(f.entries),

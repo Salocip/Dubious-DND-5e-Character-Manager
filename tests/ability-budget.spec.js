@@ -47,7 +47,7 @@ const backgroundsFixture = {
 };
 
 const classAsiFixture = {
-  _v: 3,
+  _v: 5,
   Barbarian: {
     levels: [4, 8, 12, 16, 19],
     multiclassReqs: { str: 13 },
