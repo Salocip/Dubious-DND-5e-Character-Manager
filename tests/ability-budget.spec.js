@@ -47,9 +47,10 @@ const backgroundsFixture = {
 };
 
 const classAsiFixture = {
-  _v: 1,
+  _v: 3,
   Barbarian: {
     levels: [4, 8, 12, 16, 19],
+    multiclassReqs: { str: 13 },
     classFeatures: [
       { name: 'Rage', level: 1, text: 'In battle, you fight with primal ferocity.' },
       { name: 'Unarmored Defense', level: 1, text: 'While you are not wearing any armor, your Armor Class equals 10 + your Dex modifier + your Con modifier.' },
@@ -67,6 +68,16 @@ const classAsiFixture = {
         { name: 'Spirit Seeker', level: 3, text: 'You gain the ability to cast the beast sense ritual.' },
       ],
     },
+  },
+  Fighter: {
+    levels: [4, 8, 12, 16, 19],
+    multiclassReqs: { or: [{ str: 13, dex: 13 }] },
+    classFeatures: [
+      { name: 'Second Wind', level: 1, text: 'You have a limited well of stamina that you can draw on to protect yourself from harm.' },
+      { name: 'Action Surge', level: 2, text: 'You can push yourself beyond your normal limits for a moment.' },
+      { name: 'Ability Score Improvement', level: 4, text: 'You can increase one ability score by 2 or two by 1.' },
+    ],
+    subclassFeatures: {},
   },
 };
 
@@ -249,6 +260,141 @@ test.describe('ability score budget: class & subclass features (cached)', () => 
     await page.getByLabel('Subclass', { exact: true }).selectOption({ label: 'Path of the Totem Warrior' });
     await expect(page.getByText('Level 3: Frenzy')).toHaveCount(0);
     await expect(page.getByText('Spirit Seeker')).toBeVisible();
+  });
+});
+
+test.describe('ability score budget: multiclassing', () => {
+  test.use({ storageState: storageStateFor() });
+
+  test('Add Class button adds a second row; base row has no X, later rows do', async ({ page }) => {
+    await page.goto('/main.html');
+    // Base row only: no Remove button
+    await expect(page.getByRole('button', { name: /Remove/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    await expect(page.getByLabel('Class 2', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Remove/ })).toHaveCount(1);
+  });
+
+  test('duplicate class option is disabled in a later row', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.getByLabel('Class', { exact: true }).selectOption({ label: 'Barbarian (PHB)' });
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    const barbarianOpt = page.getByLabel('Class 2', { exact: true }).locator('option[value="Barbarian (PHB)"]');
+    await expect(barbarianOpt).toBeDisabled();
+  });
+
+  test('multiclass requirement met -> option enabled', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.getByLabel('Strength base').fill('13');
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    const barbarianOpt = page.getByLabel('Class 2', { exact: true }).locator('option[value="Barbarian (PHB)"]');
+    await expect(barbarianOpt).toBeEnabled();
+  });
+
+  test('multiclass requirement unmet -> option disabled but present', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.getByLabel('Strength base').fill('8');
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    const barbarianOpt = page.getByLabel('Class 2', { exact: true }).locator('option[value="Barbarian (PHB)"]');
+    await expect(barbarianOpt).toBeDisabled();
+    await expect(barbarianOpt).toHaveCount(1);
+  });
+
+  test('or requirement (Fighter): str alone meets it; neither meets -> disabled', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    const fighterOpt = page.getByLabel('Class 2', { exact: true }).locator('option[value="Fighter (PHB)"]');
+    // str 13 + dex 8 -> OR met via str
+    await page.getByLabel('Strength base').fill('13');
+    await page.getByLabel('Dexterity base').fill('8');
+    await expect(fighterOpt).toBeEnabled();
+    // str 8 + dex 8 -> neither meets -> disabled
+    await page.getByLabel('Strength base').fill('8');
+    await expect(fighterOpt).toBeDisabled();
+  });
+
+  test('features from both classes render', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.evaluate(() => {
+      const d = Alpine.$data(document.querySelector('[x-data="characterState"]'));
+      d.character.classes = [
+        { id: 1, name: 'Barbarian (PHB)', subclass: '', level: 3 },
+        { id: 2, name: 'Fighter (PHB)', subclass: '', level: 2 },
+      ];
+      d.recomputeClasses();
+    });
+    await expect(page.getByText('Rage', { exact: true })).toBeVisible();
+    await expect(page.getByText('Action Surge', { exact: true })).toBeVisible();
+  });
+
+  test('deleting a class removes its features and updates level/ASI', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.evaluate(() => {
+      const d = Alpine.$data(document.querySelector('[x-data="characterState"]'));
+      d.character.classes = [
+        { id: 1, name: 'Barbarian (PHB)', subclass: '', level: 4 },
+        { id: 2, name: 'Fighter (PHB)', subclass: '', level: 4 },
+      ];
+      d.recomputeClasses();
+    });
+    await expect(page.getByText('Action Surge', { exact: true })).toBeVisible();
+    // total level 8, 2 ASIs -> budget 19
+    await expect(budget(page)).toHaveText('19');
+    await page.getByRole('button', { name: /Remove/ }).click();
+    await expect(page.getByText('Action Surge', { exact: true })).toHaveCount(0);
+    // total level 4, 1 ASI -> budget 17
+    await expect(budget(page)).toHaveText('17');
+  });
+
+  test('Add Class rows get unique ids so deleting one leaves no phantom row', async ({ page }) => {
+    await page.goto('/main.html');
+    // Meet Fighter (str 13) and Wizard (int 13) multiclass requirements
+    await page.getByLabel('Strength base').fill('13');
+    await page.getByLabel('Intelligence base').fill('13');
+    // Add two classes via the real button (exercises the id counter)
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    await page.getByRole('button', { name: 'Add Class' }).click();
+    await expect(page.getByLabel('Class 3', { exact: true })).toBeVisible();
+    // Select distinct classes in each row
+    await page.getByLabel('Class', { exact: true }).selectOption({ label: 'Barbarian (PHB)' });
+    await page.getByLabel('Class 2', { exact: true }).selectOption({ label: 'Fighter (PHB)' });
+    await page.getByLabel('Class 3', { exact: true }).selectOption({ label: 'Wizard (PHB)' });
+    // Delete the middle row (Fighter)
+    await page.getByRole('button', { name: 'Remove Fighter' }).click();
+    // Exactly two class rows remain, in order, no phantom empty row
+    await expect(page.getByLabel('Class', { exact: true })).toHaveValue('Barbarian (PHB)');
+    await expect(page.getByLabel('Class 2', { exact: true })).toHaveValue('Wizard (PHB)');
+    await expect(page.getByLabel('Class 3', { exact: true })).toHaveCount(0);
+  });
+
+  test('total level across classes drives proficiency bonus', async ({ page }) => {
+    await page.goto('/main.html');
+    const bonus = await page.evaluate(() => {
+      const d = Alpine.$data(document.querySelector('[x-data="characterState"]'));
+      d.character.classes = [
+        { id: 1, name: 'Barbarian (PHB)', subclass: '', level: 3 },
+        { id: 2, name: 'Fighter (PHB)', subclass: '', level: 2 },
+      ];
+      d.recomputeClasses();
+      return d.proficiencyBonus();
+    });
+    expect(bonus).toBe(3); // level 5 -> ceil(5/4)+1
+  });
+
+  test('ASI count sums across classes', async ({ page }) => {
+    await page.goto('/main.html');
+    const result = await page.evaluate(() => {
+      const d = Alpine.$data(document.querySelector('[x-data="characterState"]'));
+      d.character.classes = [
+        { id: 1, name: 'Barbarian (PHB)', subclass: '', level: 4 },
+        { id: 2, name: 'Fighter (PHB)', subclass: '', level: 4 },
+      ];
+      d.recomputeClasses();
+      return { level: d.character.level, asiCount: d.character.asiCount, budget: d.abilityBudgetRemaining() };
+    });
+    expect(result.level).toBe(8);
+    expect(result.asiCount).toBe(2);
+    expect(result.budget).toBe(19); // 15 + 2*2
   });
 });
 

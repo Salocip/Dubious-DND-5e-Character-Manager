@@ -50,6 +50,7 @@
                     <div class="w-2/3 grid grid-cols-3 gap-2">
                         <div class="flex flex-col space-y-1">
                             <input type="text" id="classLevelDisplay" aria-label="Class & Level" placeholder="" readonly
+                                :value="classLevelDisplayText()"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-100">
                             <span class="text-xs text-gray-500 uppercase">Class &amp; Level</span>
                         </div>
@@ -99,22 +100,43 @@
             <!-- 2. Class & Subclass -->
             <section class="py-4 border-b border-gray-200">
                 <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Class &amp; Subclass</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="flex flex-col space-y-1">
-                        <label for="selectedClasses" class="text-xs text-gray-500 uppercase">Class</label>
-                        <select id="selectedClasses" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </select>
-                    </div>
-                    <div class="flex flex-col space-y-1">
-                        <label for="selectedSubclasses" class="text-xs text-gray-500 uppercase">Subclass</label>
-                        <select id="selectedSubclasses" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </select>
-                    </div>
-                    <div class="flex flex-col space-y-1">
-                        <label for="classLevel" class="text-xs text-gray-500 uppercase">Level</label>
-                        <input type="number" id="classLevel" min="1" max="20" x-model.number="character.level"
-                            class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
+                <button type="button" x-on:click="addClass()"
+                    class="mb-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 cursor-pointer">Add Class</button>
+                <div class="space-y-4">
+                    <template x-for="c in character.classes" :key="c.id">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div class="flex flex-col space-y-1">
+                                <label class="text-xs text-gray-500 uppercase" x-text="rowLabel(c)"></label>
+                                <select x-model="c.name" x-on:change="onClassChange(c)" :aria-label="rowLabel(c)"
+                                    class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select a class…</option>
+                                    <template x-for="opt in classOptions()" :key="opt">
+                                        <option :value="opt" :disabled="classOptionDisabled(opt, c)" x-text="opt"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="flex flex-col space-y-1">
+                                <label class="text-xs text-gray-500 uppercase">Subclass</label>
+                                <select x-model="c.subclass" x-on:change="onSubclassChange(c)" aria-label="Subclass"
+                                    class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">—</option>
+                                    <template x-for="s in availableSubclassesForClass(c)" :key="s.value">
+                                        <option :value="s.value" x-text="s.label"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="flex flex-col space-y-1">
+                                <label class="text-xs text-gray-500 uppercase">Level</label>
+                                <input type="number" min="1" max="20" x-model.number="c.level" x-on:input="recomputeClasses()" aria-label="Level"
+                                    class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button x-show="idxOf(c) > 0" type="button" x-on:click="removeClass(c)"
+                                    :aria-label="'Remove ' + (c.name ? c.name.replace(/\s+\([^)]+\)$/, '') : 'class ' + (idxOf(c)+1))"
+                                    class="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 cursor-pointer">×</button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </section>
 
@@ -239,7 +261,7 @@
                     <div>
                         <span class="text-xs text-gray-500 uppercase">Class &amp; Subclass Features</span>
                         <ul class="list-disc pl-5 space-y-1">
-                            <template x-for="f in allFeaturesForLevel()" :key="(f.isSubclass ? 's' : 'c') + f.level + '-' + f.name">
+                            <template x-for="f in allFeaturesForLevel()" :key="(f.isSubclass ? 's' : 'c') + f.className + f.level + '-' + f.name">
                                 <li>
                                     <span class="font-medium" x-text="(f.isSubclass ? 'Level ' + f.level + ': ' : '') + f.name"></span>
                                     <div class="text-sm text-gray-600" x-text="f.text"></div>
@@ -734,8 +756,10 @@
                 subraces: [],
                 backgrounds: [],
                 feats: [],
-                classFeatures: [],
-                subclassFeatures: [],
+                classFeatures: {},
+                subclassFeatures: {},
+                multiclassReqs: {},
+                classAsiLevels: {},
             });
 
             Alpine.data('characterState', () => ({
@@ -748,6 +772,8 @@
                     alignment: '',
                     xp: '',
                     level: 1,
+                    classes: [{ id: 1, name: '', subclass: '', level: 1 }],
+                    _classSeq: 1,
                     asi: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
                     asiChoices: {},
                     asiCount: 0,
@@ -830,6 +856,13 @@
                     // the $watch handlers above only fire on later changes.
                     this.recompute();
                     this.recomputeBackground();
+                    this.recomputeClasses();
+                    // Eagerly preload every class features/ASI/requirements so
+                    // multiclass requirement-disabling works from page load.
+                    classes.forEach((opt) => {
+                        const m = /^(.+?)\s+\(([^)]+)\)$/.exec(opt);
+                        if (m) loadClassAsi(m[1]);
+                    });
                 },
 
                 seedFromCache() {
@@ -872,6 +905,15 @@
                     } catch {
                         // corrupt or missing — keep defaults
                     }
+                    // Migrate old saved characters (no classes array) to a single
+                    // base row seeded from the persisted level. Class name was never
+                    // persisted in the old model, so the row starts unselected.
+                    if (!Array.isArray(this.character.classes) || this.character.classes.length === 0) {
+                        const lvl = Number(this.character.level) || 1;
+                        this.character.classes = [{ id: 1, name: '', subclass: '', level: lvl }];
+                        this.character._classSeq = 1;
+                    }
+                    this.recomputeClasses();
                 },
 
                 saveCharacter() {
@@ -888,30 +930,148 @@
                 get subraces() { return this.$store.characterData.subraces; },
                 get backgrounds() { return this.$store.characterData.backgrounds; },
                 get feats() { return this.$store.characterData.feats; },
-                get classFeatures() { return this.$store.characterData.classFeatures; },
-                get subclassFeatures() { return this.$store.characterData.subclassFeatures; },
 
-                // Class features earned at or below the current level, in level order.
-                classFeaturesForLevel() {
-                    const lvl = Number(this.character.level) || 1;
-                    return this.classFeatures
-                        .filter((f) => f.level <= lvl)
-                        .sort((a, b) => a.level - b.level);
+                // Total character level = sum of all class levels (derived).
+                totalLevel() {
+                    return this.character.level;
                 },
 
-                // Class + chosen-subclass features at or below the current level,
-                // merged in level order (stable within a level: class first).
-                // Subclass features render with a "Level N:" prefix like 5etools.
+                // Recompute derived level/asiCount from the per-class rows. Called on
+                // any class add/remove/change and on load/migration. level and
+                // asiCount stay PLAIN writable fields (not getters) so existing
+                // pure-logic tests that set them directly keep working.
+                recomputeClasses() {
+                    this.character.level = this.character.classes.reduce((s, c) => s + (Number(c.level) || 1), 0);
+                    this.character.asiCount = this.character.classes.reduce((sum, c) => {
+                        const className = c.name ? c.name.replace(/\s+\([^)]+\)$/, '') : '';
+                        const entry = this.asiLevelsFor(className);
+                        return sum + entry.filter((l) => l <= (Number(c.level) || 1)).length;
+                    }, 0);
+                },
+
+                // ASI levels for a class, from the store map populated by loadClassAsi.
+                asiLevelsFor(className) {
+                    return this.$store.characterData.classAsiLevels[className] || [];
+                },
+
+                // Class + chosen-subclass features for every class row at or below
+                // that row level, merged in level order (stable within a level:
+                // class first). Subclass features render with a "Level N:" prefix.
                 allFeaturesForLevel() {
-                    const lvl = Number(this.character.level) || 1;
-                    const sub = this.subclassFeatures
-                        .filter((f) => f.level <= lvl)
-                        .map((f) => ({ name: f.name, level: f.level, text: f.text, isSubclass: true }));
-                    return this.classFeatures
-                        .filter((f) => f.level <= lvl)
-                        .map((f) => ({ name: f.name, level: f.level, text: f.text, isSubclass: false }))
-                        .concat(sub)
-                        .sort((a, b) => a.level - b.level || (a.isSubclass ? 1 : 0) - (b.isSubclass ? 1 : 0));
+                    const out = [];
+                    this.character.classes.forEach((c) => {
+                        const className = c.name ? c.name.replace(/\s+\([^)]+\)$/, '') : '';
+                        const lvl = Number(c.level) || 1;
+                        const classFeatures = this.$store.characterData.classFeatures[className] || [];
+                        classFeatures
+                            .filter((f) => f.level <= lvl)
+                            .forEach((f) => out.push({ name: f.name, level: f.level, text: f.text, isSubclass: false, className: className }));
+                        const subFeatures = (this.$store.characterData.subclassFeatures[className] || {})[c.subclass] || [];
+                        subFeatures
+                            .filter((f) => f.level <= lvl)
+                            .forEach((f) => out.push({ name: f.name, level: f.level, text: f.text, isSubclass: true, className: className }));
+                    });
+                    return out.sort((a, b) => a.level - b.level || (a.isSubclass ? 1 : 0) - (b.isSubclass ? 1 : 0));
+                },
+
+                // Whether the character meets the multiclassing requirements for a
+                // class. Rows after the first must meet these; the base class has no
+                // requirement. Missing requirements are treated as met.
+                meetsMulticlassReqs(className) {
+                    const reqs = this.$store.characterData.multiclassReqs[className];
+                    if (!reqs) return true;
+                    const abilityKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+                    if (reqs.or) {
+                        // OR within a group, AND across groups (5etools renderer).
+                        return reqs.or.every((group) =>
+                            Object.entries(group).some(([ab, min]) =>
+                                abilityKeys.includes(ab) && this.abilityTotal(ab) >= min
+                            )
+                        );
+                    }
+                    return Object.entries(reqs).every(([ab, min]) =>
+                        abilityKeys.includes(ab) && this.abilityTotal(ab) >= min
+                    );
+                },
+
+                // Index of a class row within character.classes.
+                idxOf(c) {
+                    return this.character.classes.indexOf(c);
+                },
+
+                // Accessible/visible label for a class row: base row is "Class",
+                // later rows are "Class 2", "Class 3", …
+                rowLabel(c) {
+                    return this.idxOf(c) === 0 ? 'Class' : 'Class ' + (this.idxOf(c) + 1);
+                },
+
+                // The 13 class option strings (e.g. "Barbarian (PHB)").
+                classOptions() {
+                    return classes;
+                },
+
+                // Whether a class option is disabled for a given row: duplicate
+                // classes are always disabled; rows after the first also require the
+                // multiclassing stat requirement. A row own currently-selected
+                // option is never disabled (so it cannot get stuck unselectable).
+                classOptionDisabled(opt, c) {
+                    if (c.name === opt) return false;
+                    const m = /^(.+?)\s+\(([^)]+)\)$/.exec(opt);
+                    if (!m) return false;
+                    const className = m[1];
+                    const dup = this.character.classes.some((other) =>
+                        other !== c && other.name && other.name.replace(/\s+\([^)]+\)$/, '') === className
+                    );
+                    if (dup) return true;
+                    if (this.idxOf(c) > 0 && !this.meetsMulticlassReqs(className)) return true;
+                    return false;
+                },
+
+                // Subclass options for a class row, from the cached subclass lookup
+                // ({ source: { class: { source: { subclass: { name } } } } }).
+                availableSubclassesForClass(c) {
+                    const m = /^(.+?)\s+\(([^)]+)\)$/.exec(c.name || '');
+                    if (!m) return [];
+                    const className = m[1];
+                    const source = m[2];
+                    let lookup = {};
+                    try {
+                        lookup = JSON.parse(localStorage.getItem("classesLookupJson")) ?? {};
+                    } catch (error) {
+                        console.error('Corrupt classesLookupJson cache:', error);
+                    }
+                    const byClass = (lookup[source] || {})[className] || {};
+                    const subs = byClass[source] || {};
+                    return Object.keys(subs).map((key) => ({ value: key, label: subs[key].name || key }));
+                },
+
+                onClassChange(c) {
+                    const m = /^(.+?)\s+\(([^)]+)\)$/.exec(c.name || '');
+                    c.subclass = '';
+                    if (m) loadClassAsi(m[1]);
+                    this.recomputeClasses();
+                },
+
+                onSubclassChange(c) {
+                    this.recomputeClasses();
+                },
+
+                addClass() {
+                    this.character.classes.push({ id: ++this.character._classSeq, name: '', subclass: '', level: 1 });
+                    this.recomputeClasses();
+                },
+
+                removeClass(c) {
+                    this.character.classes.splice(this.character.classes.indexOf(c), 1);
+                    this.recomputeClasses();
+                },
+
+                // "Barbarian 3 · Fighter 2" for the Class & Level display.
+                classLevelDisplayText() {
+                    return this.character.classes
+                        .filter((c) => c.name)
+                        .map((c) => c.name.replace(/\s+\([^)]+\)$/, '') + ' ' + (Number(c.level) || 1))
+                        .join(' · ');
                 },
 
                 availableSubraces() {
@@ -1512,18 +1672,6 @@
             "Wizard (PHB)"
         ];
 
-        const select = document.getElementById('selectedClasses');
-        const subclassSelect = document.getElementById('selectedSubclasses');
-        const levelInput = document.getElementById('classLevel');
-        const classLevelDisplay = document.getElementById('classLevelDisplay');
-
-        function updateClassLevelDisplay() {
-            const cls = select.value ? select.value.replace(/\s+\([^)]+\)$/, '') : '';
-            const sub = subclassSelect.value || '';
-            const lvl = levelInput.value || '';
-            classLevelDisplay.value = [cls, sub, lvl ? 'Lv ' + lvl : ''].filter(Boolean).join(' · ');
-        }
-
         // Extract display text from a 5etools entries array: join string entries
         // and strip {@...} tags. Typed entries (lists, tables) are skipped — the
         // leading paragraphs carry the feature description.
@@ -1544,13 +1692,16 @@
         }
 
         // Load the class's ASI schedule (levels at which it grants Ability Score
-        // Improvements) from 5etools class/class-<name>.json, cache it, and push the
-        // resolved count for the current level into Alpine state so the budget counter
-        // reacts. Also pushes the class's PHB features into the store for display.
-        // Cache shape: _v:1 plus className -> {
+        // Improvements), its PHB features, subclass features, and multiclassing
+        // requirements from 5etools class/class-<name>.json, cache it, and push
+        // the data into the store maps so the budget counter and feature list react.
+        // className is the BARE class name (e.g. "Barbarian"), NOT the option string
+        // "Barbarian (PHB)" — the caller parses the source suffix first.
+        // Cache shape: _v:3 plus className -> {
         //   levels: number[],
         //   classFeatures: [{name, level, text}],
         //   subclassFeatures: { shortName: [{name, level, text}] },
+        //   multiclassReqs: {str:13} | {or:[...]} | null,
         // }.
         function loadClassAsi(className) {
             const cacheKey = 'classAsiJson';
@@ -1561,38 +1712,33 @@
                 console.error('Corrupt ' + cacheKey + ' cache, clearing:', error);
                 localStorage.removeItem(cacheKey);
             }
-            const apply = function (levels, classFeatures, subclassFeatures) {
-                cache[className] = { levels: levels, classFeatures: classFeatures, subclassFeatures: subclassFeatures };
-                cache._v = 2;
+            const apply = function (levels, classFeatures, subclassFeatures, multiclassReqs) {
+                cache[className] = { levels: levels, classFeatures: classFeatures, subclassFeatures: subclassFeatures, multiclassReqs: multiclassReqs };
+                cache._v = 3;
                 try {
                     localStorage.setItem(cacheKey, JSON.stringify(cache));
                 } catch (error) {
                     console.error('Failed to cache class ASI data:', error);
                 }
-                updateAsiCount(levels);
                 if (window.Alpine && Alpine.store) {
                     const store = Alpine.store('characterData');
                     if (store) {
-                        store.classFeatures = classFeatures;
-                        pushSubclassFeatures(subclassFeatures);
+                        store.classFeatures[className] = classFeatures;
+                        store.subclassFeatures[className] = subclassFeatures;
+                        store.multiclassReqs[className] = multiclassReqs;
+                        store.classAsiLevels[className] = levels;
                     }
                 }
             };
-            const pushSubclassFeatures = function (subclassFeatures) {
-                if (!window.Alpine || !Alpine.store) return;
-                const store = Alpine.store('characterData');
-                if (!store) return;
-                const shortName = subclassSelect.value;
-                store.subclassFeatures = (subclassFeatures || {})[shortName] || [];
-            };
             const cached = cache[className];
-            if (cached && cache._v === 2 && Array.isArray(cached.levels)) {
-                updateAsiCount(cached.levels);
+            if (cached && cache._v === 3 && Array.isArray(cached.levels)) {
                 if (window.Alpine && Alpine.store) {
                     const store = Alpine.store('characterData');
                     if (store) {
-                        store.classFeatures = cached.classFeatures || [];
-                        pushSubclassFeatures(cached.subclassFeatures);
+                        store.classFeatures[className] = cached.classFeatures || [];
+                        store.subclassFeatures[className] = cached.subclassFeatures || {};
+                        store.multiclassReqs[className] = cached.multiclassReqs || null;
+                        store.classAsiLevels[className] = cached.levels;
                     }
                 }
                 return;
@@ -1622,86 +1768,14 @@
                             name: f.name, level: f.level, text: featureText(f.entries),
                         });
                     });
-                    apply(levels, classFeatures, subclassFeatures);
+                    const cls = (data.class || [])[0] || {};
+                    const multiclassReqs = (cls.multiclassing && cls.multiclassing.requirements) || null;
+                    apply(levels, classFeatures, subclassFeatures, multiclassReqs);
                 })
                 .catch(function (error) {
                     console.error('Failed to load class ASI data for ' + className + ':', error);
-                    updateAsiCount([]);
                 });
         }
-
-        // Set character.asiCount = number of ASI levels <= current level, reactively.
-        function updateAsiCount(levels) {
-            const root = document.querySelector('[x-data="characterState"]');
-            if (!root || !window.Alpine) return;
-            const data = Alpine.$data(root);
-            const lvl = Number(levelInput.value) || 1;
-            data.character.asiCount = (levels || []).filter(function (l) { return l <= lvl; }).length;
-        }
-
-        classes.forEach(cls => {
-            const option = document.createElement('option');
-            option.value = cls;
-            option.textContent = cls;
-            select.appendChild(option);
-        });
-
-        // Populate the subclass dropdown from the cached subclass lookup
-        // ({ source: { class: { source: { subclass: { name } } } } }).
-        // Class values are "Name (SRC)"; show subclasses from the same source.
-        select.addEventListener('change', function () {
-            subclassSelect.innerHTML = '';
-            const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
-            if (!match) return;
-            const className = match[1];
-            const source = match[2];
-            let lookup = {};
-            try {
-                lookup = JSON.parse(localStorage.getItem("classesLookupJson")) ?? {};
-            } catch (error) {
-                console.error('Corrupt classesLookupJson cache:', error);
-            }
-            const byClass = (lookup[source] || {})[className] || {};
-            const subs = byClass[source] || {};
-            Object.keys(subs).forEach(function (key) {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = subs[key].name || key;
-                subclassSelect.appendChild(option);
-            });
-            // Placeholder keeps the subclass unselected until the user picks one;
-            // without it the first option would auto-select (and auto-display
-            // its features) the moment options are appended.
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = 'Select a subclass…';
-            subclassSelect.insertBefore(placeholder, subclassSelect.firstChild);
-            subclassSelect.value = '';
-            updateClassLevelDisplay();
-            loadClassAsi(className);
-        });
-        // Changing the subclass swaps the displayed subclass features from the
-        // cached class data (loadClassAsi has already run for this class).
-        subclassSelect.addEventListener('change', function () {
-            updateClassLevelDisplay();
-            const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
-            if (!match || !window.Alpine || !Alpine.store) return;
-            const cache = JSON.parse(localStorage.getItem('classAsiJson')) ?? {};
-            const entry = cache[match[1]];
-            if (!entry) return;
-            const store = Alpine.store('characterData');
-            if (store) store.subclassFeatures = (entry.subclassFeatures || {})[subclassSelect.value] || [];
-        });
-        levelInput.addEventListener('input', function () {
-            updateClassLevelDisplay();
-            const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
-            if (!match) return;
-            const cache = JSON.parse(localStorage.getItem('classAsiJson')) ?? {};
-            const entry = cache[match[1]];
-            if (entry && Array.isArray(entry.levels)) {
-                updateAsiCount(entry.levels);
-            }
-        });
 
 
         Sortable.create(document.getElementById("listWithHandle"), {
