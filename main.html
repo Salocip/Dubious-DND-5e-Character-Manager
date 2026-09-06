@@ -33,7 +33,7 @@
 
     <main>
 
-        <div x-data="characterState" class="max-w-4xl mx-auto px-4">
+        <div x-data="characterState" class="max-w-7xl mx-auto px-4">
 
             <!-- 1. Identity -->
             <section class="pt-4 pb-4 border-b border-gray-200">
@@ -287,6 +287,17 @@
                             <span x-text="character.bgEquipment || '—'"></span>
                         </div>
                     </div>
+                    <div role="region" aria-label="Misc Features" x-show="miscFeatures().length > 0">
+                        <span class="text-xs text-gray-500 uppercase">Misc Features</span>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <template x-for="f in miscFeatures()" :key="f.id">
+                                <li>
+                                    <span class="font-medium" x-text="f.name"></span>
+                                    <div class="text-sm text-gray-600" x-text="f.text"></div>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
                 </div>
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="flex flex-col space-y-1">
@@ -425,9 +436,7 @@
                 </div>
             </div>
 
-        </div>
-
-        <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">
+            <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">
 
             <div class="max-w-md mx-auto mt-10 pb-8">
                 <div class="flex items-center gap-2">
@@ -456,6 +465,67 @@
                 </div>
             </div>
 
+            <template x-for="item in character.inventory" :key="character._invVersion + '-' + item.id">
+                <div class="inventory-item" :data-id="item.id">
+                    <span class="item-name" x-text="item.name"></span>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="move cursor-grab text-gray-400 select-none" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
+                        <button type="button" aria-label="Remove item"
+                            class="border border-red-400 text-red-600 rounded px-2 py-1 hover:bg-red-100 text-lg cursor-pointer leading-none"
+                            @click="removeInventoryItem(item)">×</button>
+                        <button type="button" @click="item.count++"
+                            class="border border-gray-400 rounded px-3 py-1.5 hover:bg-blue-100 text-lg cursor-pointer"> + </button>
+                        <button type="button" @click="if (item.count > 0) item.count--"
+                            class="border border-gray-400 rounded px-3 py-1.5 hover:bg-blue-100 text-lg cursor-pointer"> - </button>
+                        <span class="text-xl pl-1 tabular-nums" x-text="item.count"></span>
+                        <template x-if="!item.effect">
+                            <button type="button" aria-label="Add effect"
+                                class="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-100 cursor-pointer"
+                                @click="startEditEffect(item)">Add effect</button>
+                        </template>
+                        <template x-if="item.effect && editingEffectId !== item.id">
+                            <span class="text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5" x-text="effectSummary(item.effect)"></span>
+                            <button type="button" aria-label="Edit effect"
+                                class="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-100 cursor-pointer"
+                                @click="startEditEffect(item)">Edit</button>
+                            <button type="button" aria-label="Clear effect"
+                                class="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-100 cursor-pointer"
+                                @click="clearEffect(item)">Clear</button>
+                        </template>
+                        <template x-if="editingEffectId === item.id">
+                            <div class="flex items-center gap-2">
+                                <select aria-label="Effect type" x-model="effectDraft.type"
+                                    class="text-xs border border-gray-300 rounded px-1 py-0.5">
+                                    <option value="set">Set</option>
+                                    <option value="bonus">Bonus</option>
+                                    <option value="proficiency">Proficiency</option>
+                                </select>
+                                <select aria-label="Effect target" x-model="effectDraft.target"
+                                    class="text-xs border border-gray-300 rounded px-1 py-0.5">
+                                    <template x-for="a in abilityList" :key="'a' + a.key">
+                                        <option :value="a.key" x-text="a.full"></option>
+                                    </template>
+                                    <template x-for="s in skillList" :key="'s' + s.key">
+                                        <option :value="s.key" x-text="s.name"></option>
+                                    </template>
+                                </select>
+                                <input type="number" aria-label="Effect value" x-model.number="effectDraft.value"
+                                    class="text-xs border border-gray-300 rounded px-1 py-0.5 w-16"
+                                    x-show="effectDraft.type !== 'proficiency'">
+                                <button type="button" aria-label="Save effect"
+                                    class="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-100 cursor-pointer"
+                                    @click="saveEffect(item)">Save</button>
+                                <button type="button" aria-label="Cancel effect"
+                                    class="text-xs border border-gray-300 rounded px-2 py-0.5 hover:bg-gray-100 cursor-pointer"
+                                    @click="editingEffectId = null">Cancel</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+
+        </div>
 
         </div>
 
@@ -470,59 +540,31 @@
         }
 
         var UNDO_LIMIT = 5;
-        var deletedStack = []; // [{ row, count, nextSibling }], LIFO
 
-        function getRowCount(row) {
-            try {
-                if (row && window.Alpine && Alpine.$data(row)) {
-                    var data = Alpine.$data(row);
-                    if (typeof data.count === "number") {
-                        return data.count;
-                    }
-                }
-            } catch (err) {
-                console.warn("getRowCount: could not read count", err);
-            }
-            console.warn("getRowCount: count unavailable, defaulting to 1", row);
-            return 1; // matches x-data="{ count: 1 }" initial value
+        // Bridge: the inventory lives in the Alpine component's character state.
+        // These module-level call sites reach it via Alpine.$data on the component root.
+        function inventoryComponent() {
+            return Alpine.$data(document.querySelector('[x-data="characterState"]'));
         }
 
-        function removeInventoryItem(button) {
-            var row = button.closest(".inventory-item");
-            if (!row) {
-                console.warn("removeInventoryItem: no .inventory-item ancestor found", button);
-                return;
-            }
-            var nextSibling = row.nextElementSibling;
-            deletedStack.push({ row: row, count: getRowCount(row), nextSibling: nextSibling });
-            if (deletedStack.length > UNDO_LIMIT) {
-                deletedStack.shift();
-            }
-            row.remove();
-            updateUndoButton();
+        function addItemToInventory(item) {
+            inventoryComponent().addItemToInventory(item);
         }
 
-        function updateUndoButton() {
-            var btn = document.getElementById("undoDelete");
-            if (!btn) return;
-            btn.disabled = deletedStack.length === 0;
+        function removeInventoryItem(entry) {
+            inventoryComponent().removeInventoryItem(entry);
         }
 
         function undoDelete() {
-            if (deletedStack.length === 0) return;
-            var entry = deletedStack.pop();
-            var restoredRow = entry.row;
-            restoredRow.setAttribute("x-data", JSON.stringify({ count: entry.count }));
-            var list = document.getElementById("listWithHandle");
-            if (entry.nextSibling && entry.nextSibling.parentNode === list) {
-                list.insertBefore(restoredRow, entry.nextSibling);
-            } else {
-                // Row was last when deleted, or its saved sibling was itself
-                // deleted since. Append at the end; order among surviving rows
-                // is always preserved.
-                list.appendChild(restoredRow);
-            }
-            updateUndoButton();
+            inventoryComponent().undoDelete();
+        }
+
+        // Initial state only: deletedStack starts empty, so the button is
+        // disabled. This runs before Alpine loads (defer), so it must not
+        // touch Alpine.$data. Reactive updates go through the component method.
+        function updateUndoButton() {
+            var btn = document.getElementById("undoDelete");
+            if (btn) btn.disabled = true;
         }
 
         function attachDeleteListener() {
@@ -539,72 +581,22 @@
         attachDeleteListener();
         updateUndoButton();
 
-        function addItemToInventory(item) {
-            const container = item.parentElement; // KEPT dead code
-
-            // Build the row fully detached, with x-data set BEFORE attach so
-            // Alpine initializes it in one well-defined step (no reliance on
-            // attribute-mutation + childList ordering on a live node).
-            var row = document.createElement("div");
-            row.className = "inventory-item";
-            row.setAttribute("x-data", "{ count: 1 }");
-
-            var nameSpan = document.createElement("span");
-            nameSpan.className = "item-name";
-            nameSpan.textContent = item.textContent.trim();
-            row.appendChild(nameSpan);
-
-            var firstDivElement = document.createElement("div"); // KEPT dead code
-            firstDivElement.className = "";
-
-            var controls = document.createElement("div");
-            controls.className = "flex items-center gap-2 mt-1";
-
-            var dragHandle = document.createElement("span");
-            dragHandle.className = "move cursor-grab text-gray-400 select-none";
-            dragHandle.textContent = "⋮⋮";
-            dragHandle.setAttribute("title", "Drag to reorder");
-            dragHandle.setAttribute("aria-hidden", "true");
-            controls.appendChild(dragHandle);
-
-            var plusButton = document.createElement("button");
-            plusButton.setAttribute("x-on:click", "count++");
-            plusButton.textContent = " + ";
-            plusButton.className = "border border-gray-400 rounded px-3 py-1.5 hover:bg-blue-100 text-lg cursor-pointer";
-            plusButton.type = "button";
-
-            var minusButton = document.createElement("button");
-            minusButton.setAttribute("x-on:click", "if (count > 0) count--");
-            minusButton.textContent = " - ";
-            minusButton.className = "border border-gray-400 rounded px-3 py-1.5 hover:bg-blue-100 text-lg cursor-pointer";
-            minusButton.type = "button";
-
-            var deleteButton = document.createElement("button");
-            deleteButton.type = "button";
-            deleteButton.textContent = "×";
-            deleteButton.setAttribute("aria-label", "Remove item");
-            deleteButton.className = "border border-red-400 text-red-600 rounded px-2 py-1 hover:bg-red-100 text-lg cursor-pointer leading-none";
-
-            var counterSpan = document.createElement("span");
-            counterSpan.setAttribute("x-text", "count");
-            counterSpan.className = "text-xl pl-1 tabular-nums";
-
-            controls.appendChild(deleteButton);
-            controls.appendChild(plusButton);
-            controls.appendChild(minusButton);
-            controls.appendChild(counterSpan);
-
-            row.appendChild(controls);
-
-            document.getElementById("listWithHandle").appendChild(row);
-
-            // Remove the source search result so "add" keeps its move semantics
-            // (the result leaves the list) while the inventory row is a clean,
-            // valid <div> rather than a moved <li>.
-            item.remove();
-        }
-
         const DATA_BASE = "https://raw.githubusercontent.com/5etools-mirror-3/5etools-2014-src/refs/heads/main/data/";
+
+        // Curated catalog of stat-affecting magic items (DMG-sourced; the PHB has
+        // none). Names/values match real 5etools items.json. When an item with a
+        // matching name is added to inventory, its effect is preselected.
+        const ITEM_EFFECTS = {
+            'Gauntlets of Ogre Power': { type: 'set', ability: 'str', value: 19 },
+            'Headband of Intellect': { type: 'set', ability: 'int', value: 19 },
+            'Amulet of Health': { type: 'set', ability: 'con', value: 19 },
+            'Belt of Hill Giant Strength': { type: 'set', ability: 'str', value: 21 },
+            'Belt of Stone Giant Strength': { type: 'set', ability: 'str', value: 23 },
+            'Belt of Frost Giant Strength': { type: 'set', ability: 'str', value: 23 },
+            'Belt of Fire Giant Strength': { type: 'set', ability: 'str', value: 25 },
+            'Belt of Cloud Giant Strength': { type: 'set', ability: 'str', value: 27 },
+            'Belt of Storm Giant Strength': { type: 'set', ability: 'str', value: 29 },
+        };
 
         async function getJsonData(url, name) {
             const response = await fetch(url);
@@ -796,6 +788,9 @@
                     flaws: '',
                     abilities: { str: { base: 10 }, dex: { base: 10 }, con: { base: 10 }, int: { base: 10 }, wis: { base: 10 }, cha: { base: 10 } },
                     skillProfs: {},
+                    inventory: [],
+                    _invSeq: 0,
+                    _invVersion: 0,
                     hpMax: null,
                     hpCurrent: null,
                     armorClass: null,
@@ -814,6 +809,11 @@
                 },
 
                 saved: false,
+
+                deletedStack: [], // [{ entry, nextId }], LIFO
+
+                editingEffectId: null,
+                effectDraft: { type: 'set', target: 'str', value: 1 },
 
                 abilityList: [
                     { key: 'str', label: 'Str', full: 'Strength' },
@@ -924,6 +924,18 @@
                         if (!Number.isFinite(c.id)) c.id = ++maxId;
                     });
                     this.character._classSeq = Math.max(this.character._classSeq || 0, maxId);
+                    // Guard inventory against a non-array from a partial/corrupt save.
+                    if (!Array.isArray(this.character.inventory)) this.character.inventory = [];
+                    // Repair NaN/null ids (pre-fix writes serialized NaN to null),
+                    // which break Alpine x-for diffing.
+                    let maxInv = 0;
+                    this.character.inventory.forEach((e) => {
+                        if (Number.isFinite(e.id)) maxInv = Math.max(maxInv, e.id);
+                    });
+                    this.character.inventory.forEach((e) => {
+                        if (!Number.isFinite(e.id)) e.id = ++maxInv;
+                    });
+                    this.character._invSeq = Math.max(Number(this.character._invSeq) || 0, maxInv);
                     this.recomputeClasses();
                 },
 
@@ -935,6 +947,154 @@
                     } catch (error) {
                         console.error('Failed to save character:', error);
                     }
+                },
+
+                // ---- Inventory (reactive) ----
+                addItemToInventory(item) {
+                    const entry = {
+                        id: ++this.character._invSeq,
+                        name: item.name,
+                        source: item.source || '',
+                        count: 1,
+                        effect: null,
+                        rarity: item.rarity || '',
+                        entries: Array.isArray(item.entries) ? item.entries : [],
+                    };
+                    const preset = ITEM_EFFECTS[item.name];
+                    if (preset) entry.effect = { ...preset };
+                    this.character.inventory.push(entry);
+                },
+
+                removeInventoryItem(entry) {
+                    const idx = this.character.inventory.indexOf(entry);
+                    if (idx === -1) return;
+                    const nextId = idx + 1 < this.character.inventory.length
+                        ? this.character.inventory[idx + 1].id
+                        : null;
+                    this.character.inventory.splice(idx, 1);
+                    this.deletedStack.push({ entry, nextId });
+                    if (this.deletedStack.length > UNDO_LIMIT) this.deletedStack.shift();
+                    this.updateUndoButton();
+                },
+
+                undoDelete() {
+                    if (this.deletedStack.length === 0) return;
+                    const { entry, nextId } = this.deletedStack.pop();
+                    if (nextId === null) {
+                        this.character.inventory.push(entry);
+                    } else {
+                        const at = this.character.inventory.findIndex((e) => e.id === nextId);
+                        if (at === -1) {
+                            this.character.inventory.push(entry);
+                        } else {
+                            this.character.inventory.splice(at, 0, entry);
+                        }
+                    }
+                    this.updateUndoButton();
+                },
+
+                updateUndoButton() {
+                    const btn = document.getElementById('undoDelete');
+                    if (btn) btn.disabled = this.deletedStack.length === 0;
+                },
+
+                reorderInventory(ids) {
+                    const byId = new Map(this.character.inventory.map((e) => [String(e.id), e]));
+                    const reordered = ids
+                        .map((id) => byId.get(String(id)))
+                        .filter((e) => e !== undefined);
+                    this.character.inventory = reordered;
+                    // Bump the version so Alpine fully re-renders the list,
+                    // discarding Sortable's physical DOM move.
+                    this.character._invVersion++;
+                },
+
+                // ---- Item effects (manual override) ----
+                startEditEffect(item) {
+                    this.effectDraft = {
+                        type: item.effect ? item.effect.type : 'set',
+                        target: item.effect ? (item.effect.ability || item.effect.skill || 'str') : 'str',
+                        value: item.effect ? (item.effect.value || 1) : 1,
+                    };
+                    this.editingEffectId = item.id;
+                },
+
+                saveEffect(item) {
+                    const d = this.effectDraft;
+                    let value = Number(d.value);
+                    if (d.type === 'set') {
+                        value = Math.max(1, Math.min(30, value));
+                    } else if (d.type === 'bonus') {
+                        value = Math.max(0, Math.min(10, value));
+                    }
+                    if (d.type === 'proficiency') {
+                        item.effect = { type: 'proficiency', skill: d.target };
+                    } else if (d.type === 'set' || d.type === 'bonus') {
+                        const isSkill = this.skillList.some((s) => s.key === d.target);
+                        if (isSkill) {
+                            item.effect = { type: d.type, skill: d.target, value };
+                        } else {
+                            item.effect = { type: d.type, ability: d.target, value };
+                        }
+                    }
+                    this.editingEffectId = null;
+                },
+
+                clearEffect(item) {
+                    item.effect = null;
+                    this.editingEffectId = null;
+                },
+
+                effectSummary(effect) {
+                    if (effect.type === 'set') {
+                        const a = this.abilityList.find((x) => x.key === effect.ability);
+                        return (a ? a.full : effect.ability) + ' = ' + effect.value;
+                    }
+                    if (effect.type === 'bonus') {
+                        const target = effect.ability
+                            ? (this.abilityList.find((x) => x.key === effect.ability) || {}).full || effect.ability
+                            : (this.skillList.find((s) => s.key === effect.skill) || {}).name || effect.skill;
+                        return '+' + effect.value + ' ' + target;
+                    }
+                    if (effect.type === 'proficiency') {
+                        const s = this.skillList.find((x) => x.key === effect.skill);
+                        return 'Proficiency in ' + (s ? s.name : effect.skill);
+                    }
+                    return '';
+                },
+
+                // Human-readable feature text for every inventory entry that is a
+                // magic item (has a rarity) OR carries a manual effect. Magic items
+                // show their 5etools description; effect-bearing items show the
+                // derived effect summary.
+                miscFeatures() {
+                    return this.character.inventory
+                        .filter((e) => e.rarity || e.effect)
+                        .map((e) => {
+                            const fx = e.effect;
+                            let text = '';
+                            if (fx) {
+                                if (fx.type === 'set') {
+                                    const a = this.abilityList.find((x) => x.key === fx.ability);
+                                    text = 'Your ' + (a ? a.full : fx.ability) + ' is ' + fx.value + ' while you carry this.';
+                                } else if (fx.type === 'bonus') {
+                                    if (fx.ability) {
+                                        const a = this.abilityList.find((x) => x.key === fx.ability);
+                                        text = '+' + fx.value + ' to ' + (a ? a.full : fx.ability);
+                                    } else {
+                                        const s = this.skillList.find((x) => x.key === fx.skill);
+                                        text = '+' + fx.value + ' to ' + (s ? s.name : fx.skill);
+                                    }
+                                } else if (fx.type === 'proficiency') {
+                                    const s = this.skillList.find((x) => x.key === fx.skill);
+                                    text = 'Proficiency in ' + (s ? s.name : fx.skill);
+                                }
+                            } else if (e.rarity) {
+                                // Magic item with no manual effect: show its description.
+                                text = this.stripMarkup(e.entries.filter((x) => typeof x === 'string').join(' '));
+                            }
+                            return { id: e.id, name: e.name, text };
+                        });
                 },
 
                 get races() { return this.$store.characterData.races; },
@@ -1387,7 +1547,22 @@
                     const a = this.character.abilities[key];
                     const base = (a && typeof a.base === 'number' && isFinite(a.base)) ? a.base : null;
                     if (base === null) return null;
-                    return base + (this.character.asi[key] || 0);
+                    let total = base + (this.character.asi[key] || 0);
+                    // Item effects apply once per inventory entry (count is
+                    // quantity, not stacking). set = highest wins; bonus = stack.
+                    let setMax = -Infinity;
+                    let bonusSum = 0;
+                    this.character.inventory.forEach((e) => {
+                        const fx = e.effect;
+                        if (!fx) return;
+                        if (fx.type === 'set' && fx.ability === key && typeof fx.value === 'number') {
+                            setMax = Math.max(setMax, fx.value);
+                        } else if (fx.type === 'bonus' && fx.ability === key && typeof fx.value === 'number') {
+                            bonusSum += fx.value;
+                        }
+                    });
+                    if (setMax !== -Infinity) total = Math.max(total, setMax);
+                    return total + bonusSum;
                 },
 
                 abilityMod(key) {
@@ -1504,12 +1679,23 @@
                 },
 
                 isSkillProficient(skill) {
-                    return this.autoSkillProfs().has(skill.key) || !!this.character.skillProfs[skill.key];
+                    if (this.autoSkillProfs().has(skill.key) || !!this.character.skillProfs[skill.key]) return true;
+                    // Item-granted proficiency (never stacks with existing proficiency).
+                    return this.character.inventory.some((e) =>
+                        e.effect && e.effect.type === 'proficiency' && e.effect.skill === skill.key
+                    );
                 },
 
                 skillBonus(skill) {
                     const mod = this.abilityMod(skill.ability) || 0;
-                    return mod + (this.isSkillProficient(skill) ? this.proficiencyBonus() : 0);
+                    let bonus = 0;
+                    this.character.inventory.forEach((e) => {
+                        const fx = e.effect;
+                        if (fx && fx.type === 'bonus' && fx.skill === skill.key && typeof fx.value === 'number') {
+                            bonus += fx.value;
+                        }
+                    });
+                    return mod + (this.isSkillProficient(skill) ? this.proficiencyBonus() : 0) + bonus;
                 },
 
                 skillBonusLabel(skill) {
@@ -1621,6 +1807,9 @@
                     const item = result.item;
                     const li = document.createElement('li');
                     li.className = 'p-2 rounded hover:bg-blue-100 cursor-pointer';
+                    li.dataset.name = item.name;
+                    li.dataset.source = item.source;
+                    li._item = item; // full item for addItemToInventory (rarity, entries)
 
                     li.textContent = item.name;
                     const sourceSpan = document.createElement('span');
@@ -1637,7 +1826,8 @@
             equipmentResultsDiv.addEventListener('click', (e) => {
                 const li = e.target.closest('li');
                 if (li && equipmentResultsDiv.contains(li)) {
-                    addItemToInventory(li);
+                    addItemToInventory(li._item || { name: li.dataset.name, source: li.dataset.source });
+                    li.remove();
                 }
             });
 
@@ -1795,7 +1985,14 @@
         Sortable.create(document.getElementById("listWithHandle"), {
             handle: '.move',
             draggable: '.inventory-item',
-            animation: 150
+            animation: 150,
+            onEnd: function (evt) {
+                const list = document.getElementById("listWithHandle");
+                const ids = [...list.querySelectorAll('.inventory-item')].map((el) => el.dataset.id);
+                // Defer past Sortable's animation so its DOM move fully settles
+                // before Alpine reconciles the x-for to the new order.
+                setTimeout(function () { inventoryComponent().reorderInventory(ids); }, 200);
+            }
         });
 
         startup().catch(function (error) {

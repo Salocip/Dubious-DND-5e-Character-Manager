@@ -48,7 +48,7 @@ test('counter is reactive after x-text fix', async ({ page }) => {
   await page.fill('#searchInput', 'bow');
   await page.locator('#equipmentList li').first().click();
 
-  const counter = page.locator('#listWithHandle .inventory-item [x-text]');
+  const counter = page.locator('#listWithHandle .inventory-item [x-text="item.count"]');
   await expect(counter).toHaveText('1');
 
   const plusButton = page
@@ -76,7 +76,7 @@ test('minus button floors at 0', async ({ page }) => {
   await page.goto('/main.html');
   await page.fill('#searchInput', 'bow');
   await page.locator('#equipmentList li').first().click();
-  const counter = page.locator('#listWithHandle .inventory-item [x-text]');
+  const counter = page.locator('#listWithHandle .inventory-item [x-text="item.count"]');
   await expect(counter).toHaveText('1');
   const minus = page.locator('#listWithHandle .inventory-item button').filter({ hasText: '-' });
   await minus.click();
@@ -137,7 +137,7 @@ test.describe('undo', () => {
     await page.fill('#searchInput', 'bow');
     await page.locator('#equipmentList li').first().click();
 
-    const counter = page.locator('#listWithHandle .inventory-item [x-text]');
+    const counter = page.locator('#listWithHandle .inventory-item [x-text="item.count"]');
     await expect(counter).toHaveText('1');
 
     const plusButton = page

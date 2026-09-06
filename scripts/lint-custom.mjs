@@ -200,7 +200,8 @@ function xDataKeys(expr) {
   return keys;
 }
 
-// Index of the matching close brace for the '{' at openIdx (string-aware).
+// Index of the matching close brace for the '{' at openIdx (string- and
+// comment-aware).
 function balancedBraceEnd(text, openIdx) {
     let depth = 0;
     let inStr = null;
@@ -209,6 +210,16 @@ function balancedBraceEnd(text, openIdx) {
         if (inStr) {
             if (ch === "\\") { i++; continue; }
             if (ch === inStr) inStr = null;
+            continue;
+        }
+        if (ch === "/" && text[i + 1] === "/") {
+            while (i < text.length && text[i] !== "\n") i++;
+            continue;
+        }
+        if (ch === "/" && text[i + 1] === "*") {
+            i += 2;
+            while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
+            i++;
             continue;
         }
         if (ch === '"' || ch === "'" || ch === "`") { inStr = ch; continue; }
@@ -231,6 +242,16 @@ function objectKeys(literal) {
         if (inStr) {
             if (ch === "\\") { i += 2; continue; }
             if (ch === inStr) inStr = null;
+            i++;
+            continue;
+        }
+        if (ch === "/" && literal[i + 1] === "/") {
+            while (i < literal.length && literal[i] !== "\n") i++;
+            continue;
+        }
+        if (ch === "/" && literal[i + 1] === "*") {
+            i += 2;
+            while (i < literal.length && !(literal[i] === "*" && literal[i + 1] === "/")) i++;
             i++;
             continue;
         }
