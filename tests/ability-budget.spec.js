@@ -28,7 +28,7 @@ const racesFixture = {
 };
 
 const classesLookupFixture = {
-  PHB: { Barbarian: { PHB: { Berserker: { name: 'Path of the Berserker' } } } },
+  PHB: { Barbarian: { PHB: { Berserker: { name: 'Path of the Berserker' }, 'Totem Warrior': { name: 'Path of the Totem Warrior' } } } },
 };
 
 const backgroundsFixture = {
