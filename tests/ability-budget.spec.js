@@ -96,6 +96,49 @@ test.describe('ability score budget', () => {
   });
 });
 
+test.describe('ability score budget: clamps', () => {
+  test.use({ storageState: storageStateFor() });
+
+  test('ability input clamps back to an affordable score when overspent', async ({ page }) => {
+    await page.goto('/main.html');
+    // str 15 (cost 9) -> budget 8
+    await page.getByLabel('Strength base').fill('15');
+    await page.getByLabel('Strength base').blur();
+    await expect(budget(page)).toHaveText('8');
+    // dex 15 (cost 9-2=7 <= 8) -> budget 1
+    await page.getByLabel('Dexterity base').fill('15');
+    await page.getByLabel('Dexterity base').blur();
+    await expect(budget(page)).toHaveText('1');
+    // con 15 (cost 9-2=7 > 1) -> clamped back to 11 (cost 3-2=1), budget 0
+    await page.getByLabel('Constitution base').fill('15');
+    await page.getByLabel('Constitution base').blur();
+    await expect(page.getByLabel('Constitution base')).toHaveValue('11');
+    await expect(budget(page)).toHaveText('0');
+  });
+
+  test('feat add is blocked when it would push the budget below zero', async ({ page }) => {
+    await page.goto('/main.html');
+    // Spend down to budget 1: str 15 (8), dex 15 (1)
+    await page.getByLabel('Strength base').fill('15');
+    await page.getByLabel('Dexterity base').fill('15');
+    await expect(budget(page)).toHaveText('1');
+    // Adding a feat (cost 2) is blocked
+    await page.getByRole('button', { name: 'Add Feat' }).click();
+    await page.getByRole('checkbox', { name: 'Actor' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Actor' })).not.toBeChecked();
+    await expect(budget(page)).toHaveText('1');
+  });
+
+  test('unchecking a feat refunds its 2 points', async ({ page }) => {
+    await page.goto('/main.html');
+    await page.getByRole('button', { name: 'Add Feat' }).click();
+    await page.getByRole('checkbox', { name: 'Actor' }).check();
+    await expect(budget(page)).toHaveText('13');
+    await page.getByRole('checkbox', { name: 'Actor' }).uncheck();
+    await expect(budget(page)).toHaveText('15');
+  });
+});
+
 test.describe('ability score budget: data loading', () => {
   test('feats and class ASI load from fetch when cache is empty', async ({ page }) => {
     await page.route('**/feats.json', (route) => route.fulfill({ json: { feat: featsFixture.feat } }));

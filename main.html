@@ -125,7 +125,8 @@
                     <template x-for="a in abilityList" :key="a.key">
                         <div class="border border-gray-300 rounded-md p-2 text-center">
                             <div class="font-semibold" x-text="a.full"></div>
-                            <input type="number" min="1" max="30" x-model.number="character.abilities[a.key].base" :aria-label="a.full + ' base'"
+                            <input type="number" min="1" max="30" x-model.number="character.abilities[a.key].base"
+                                x-on:change="clampAbility(a.key)" :aria-label="a.full + ' base'"
                                 class="w-full text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <div class="text-xs text-gray-500 h-4" x-text="character.asi[a.key] ? '+' + character.asi[a.key] : ''"></div>
                             <div class="text-lg font-bold" x-text="modLabel(a.key)"></div>
@@ -375,7 +376,8 @@
                     <div class="overflow-y-auto px-4 py-3 space-y-2">
                         <template x-for="f in feats" :key="f.name">
                             <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" :value="f.name" x-model="character.feats"
+                                <input type="checkbox" :value="f.name" :checked="character.feats.includes(f.name)"
+                                    x-on:change="toggleFeat(f.name, $event.target.checked, $event.target)"
                                     class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 <span x-text="f.name"></span>
                             </label>
@@ -1214,6 +1216,43 @@
                     return 27 + asiPoints - baseCost - featCost;
                 },
 
+                // Highest base score affordable for key given the current budget.
+                // Searches downward from the current value so an overspend (negative
+                // remaining) clamps back to a legal score. Point cost is flat at 9
+                // for scores >= 15, so the clamp only binds within the 8-15 range.
+                maxAffordableBase(key) {
+                    const current = Number(this.character.abilities[key].base) || 0;
+                    const remaining = this.abilityBudgetRemaining();
+                    for (let s = current; s >= 8; s--) {
+                        if (this.pointCost(s) - this.pointCost(current) <= remaining) return s;
+                    }
+                    return 8;
+                },
+
+                // Revert an ability base score to the max affordable if the user
+                // tried to spend past the 0-point limit.
+                clampAbility(key) {
+                    const a = this.character.abilities[key];
+                    const val = Number(a.base) || 0;
+                    const max = this.maxAffordableBase(key);
+                    if (val > max) a.base = max;
+                },
+
+                // Add/remove a feat, blocking the add when it would push the budget
+                // below 0 (each feat costs 2 points). Resets the checkbox element so
+                // a blocked add does not leave it visually checked.
+                toggleFeat(name, checked, target) {
+                    if (checked) {
+                        if (this.abilityBudgetRemaining() < 2) {
+                            if (target) target.checked = false;
+                            return;
+                        }
+                        if (!this.character.feats.includes(name)) this.character.feats.push(name);
+                    } else {
+                        this.character.feats = this.character.feats.filter((f) => f !== name);
+                    }
+                },
+
                 skillKey(s) {
                     return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 },
@@ -1435,7 +1474,7 @@
         // Load the class's ASI schedule (levels at which it grants Ability Score
         // Improvements) from 5etools class/class-<name>.json, cache it, and push the
         // resolved count for the current level into Alpine state so the budget counter
-        // reacts. Cache shape: { _v:1, [className]: [levels] }.
+        // reacts. Cache shape: _v:1 plus className -> array of ASI levels.
         function loadClassAsi(className) {
             const cacheKey = 'classAsiJson';
             let cache = {};
