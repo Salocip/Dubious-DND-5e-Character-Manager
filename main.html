@@ -1303,12 +1303,38 @@
         ];
 
         const select = document.getElementById('selectedClasses');
+        const subclassSelect = document.getElementById('selectedSubclasses');
 
         classes.forEach(cls => {
             const option = document.createElement('option');
             option.value = cls;
             option.textContent = cls;
             select.appendChild(option);
+        });
+
+        // Populate the subclass dropdown from the cached subclass lookup
+        // ({ source: { class: { source: { subclass: { name } } } } }).
+        // Class values are "Name (SRC)"; show subclasses from the same source.
+        select.addEventListener('change', function () {
+            subclassSelect.innerHTML = '';
+            const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
+            if (!match) return;
+            const className = match[1];
+            const source = match[2];
+            let lookup = {};
+            try {
+                lookup = JSON.parse(localStorage.getItem("classesLookupJson")) ?? {};
+            } catch (error) {
+                console.error('Corrupt classesLookupJson cache:', error);
+            }
+            const byClass = (lookup[source] || {})[className] || {};
+            const subs = byClass[source] || {};
+            Object.keys(subs).forEach(function (key) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = subs[key].name || key;
+                subclassSelect.appendChild(option);
+            });
         });
 
 
