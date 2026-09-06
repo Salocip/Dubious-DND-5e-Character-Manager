@@ -134,6 +134,7 @@
                     </template>
                 </div>
                 <div class="mt-2 text-sm">Proficiency Bonus: <span class="font-semibold" x-text="'+' + proficiencyBonus()"></span></div>
+                <div class="mt-1 text-sm">Points remaining: <span id="abilityBudgetRemaining" class="font-semibold" x-text="abilityBudgetRemaining()"></span></div>
                 <div x-show="asiChoiceSlots().length > 0" class="mt-2">
                     <span class="text-xs text-gray-500 uppercase">Ability Score Increase choices</span>
                     <div class="flex flex-wrap gap-2 mt-1">
@@ -345,6 +346,49 @@
                     </div>
                 </div>
             </section>
+
+            <!-- Feats -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Feats</h2>
+                <button type="button" x-on:click="character.featModalOpen = true"
+                    class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Add Feat
+                </button>
+                <div class="mt-2 text-sm" x-show="character.feats.length > 0">
+                    <span class="text-xs text-gray-500 uppercase">Picked</span>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <template x-for="f in character.feats" :key="f"><li x-text="f"></li></template>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Feat picker modal -->
+            <div x-show="character.featModalOpen" x-transition.opacity
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                x-on:click.self="character.featModalOpen = false">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                        <h3 class="text-sm font-semibold text-gray-700">Choose Feats</h3>
+                        <button type="button" x-on:click="character.featModalOpen = false" aria-label="Close"
+                            class="text-gray-500 hover:text-gray-700 text-xl leading-none">&times;</button>
+                    </div>
+                    <div class="overflow-y-auto px-4 py-3 space-y-2">
+                        <template x-for="f in feats" :key="f.name">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" :value="f.name" x-model="character.feats"
+                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span x-text="f.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                    <div class="px-4 py-3 border-t border-gray-200 flex justify-end">
+                        <button type="button" x-on:click="character.featModalOpen = false"
+                            class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Done
+                        </button>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
@@ -622,6 +666,27 @@
             return cached && cached._v === 1 && Array.isArray(cached.background);
         }
 
+        function pickFeat(f) {
+            return {
+                name: f.name,
+                source: f.source,
+            };
+        }
+
+        function normalizeFeats(data) {
+            if (!data || !Array.isArray(data.feat)) {
+                throw new Error('Unexpected feats.json shape');
+            }
+            const feat = data.feat
+                .filter(function (f) { return f.source === "PHB"; })
+                .map(pickFeat);
+            return { feat: feat };
+        }
+
+        function isValidFeatsCache(cached) {
+            return cached && cached._v === 1 && Array.isArray(cached.feat);
+        }
+
         async function loadNormalized(url, cacheKey, normalizeFn, validateFn) {
             try {
                 const cached = JSON.parse(localStorage.getItem(cacheKey));
@@ -655,6 +720,7 @@
                 races: [],
                 subraces: [],
                 backgrounds: [],
+                feats: [],
             });
 
             Alpine.data('characterState', () => ({
@@ -669,6 +735,9 @@
                     level: 1,
                     asi: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
                     asiChoices: {},
+                    asiCount: 0,
+                    feats: [],
+                    featModalOpen: false,
                     speed: 30,
                     size: '',
                     darkvision: 0,
@@ -765,6 +834,14 @@
                     } catch {
                         this.$store.characterData.backgrounds = [];
                     }
+                    try {
+                        const fd = JSON.parse(localStorage.getItem('featsJson')) ?? {};
+                        this.$store.characterData.feats = (fd && Array.isArray(fd.feat))
+                            ? fd.feat.slice().sort((a, b) => a.name.localeCompare(b.name))
+                            : [];
+                    } catch {
+                        this.$store.characterData.feats = [];
+                    }
                 },
 
                 loadCharacter() {
@@ -791,6 +868,7 @@
                 get races() { return this.$store.characterData.races; },
                 get subraces() { return this.$store.characterData.subraces; },
                 get backgrounds() { return this.$store.characterData.backgrounds; },
+                get feats() { return this.$store.characterData.feats; },
 
                 availableSubraces() {
                     return this.character.race
@@ -1114,6 +1192,28 @@
                     return Math.ceil(lvl / 4) + 1;
                 },
 
+                pointCost(score) {
+                    const s = Number(score) || 0;
+                    if (s <= 8) return 0;
+                    if (s === 9) return 1;
+                    if (s === 10) return 2;
+                    if (s === 11) return 3;
+                    if (s === 12) return 4;
+                    if (s === 13) return 5;
+                    if (s === 14) return 7;
+                    if (s >= 15) return 9;
+                    return 0;
+                },
+
+                abilityBudgetRemaining() {
+                    const baseCost = this.abilityList.reduce((sum, a) => {
+                        return sum + this.pointCost(this.character.abilities[a.key].base);
+                    }, 0);
+                    const asiPoints = 2 * (Number(this.character.asiCount) || 0);
+                    const featCost = 2 * (this.character.feats || []).length;
+                    return 27 + asiPoints - baseCost - featCost;
+                },
+
                 skillKey(s) {
                     return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                 },
@@ -1190,6 +1290,7 @@
             const classesLookupJsonUrl = DATA_BASE + "generated/gendata-subclass-lookup.json";
             const racesJsonUrl = DATA_BASE + "races.json";
             const backgroundsJsonUrl = DATA_BASE + "backgrounds.json";
+            const featsJsonUrl = DATA_BASE + "feats.json";
 
 
             if (!localStorage.getItem("equipmentJson")) {
@@ -1298,6 +1399,14 @@
                     store.backgrounds = (backgroundsData.background || []).slice().sort((a, b) => a.name.localeCompare(b.name));
                 }
             }
+
+            const featsData = await loadNormalized(featsJsonUrl, 'featsJson', normalizeFeats, isValidFeatsCache);
+            if (window.Alpine && Alpine.store && featsData) {
+                const store = Alpine.store('characterData');
+                if (store) {
+                    store.feats = (featsData.feat || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+                }
+            }
         }
 
 
@@ -1321,6 +1430,61 @@
             const sub = subclassSelect.value || '';
             const lvl = levelInput.value || '';
             classLevelDisplay.value = [cls, sub, lvl ? 'Lv ' + lvl : ''].filter(Boolean).join(' · ');
+        }
+
+        // Load the class's ASI schedule (levels at which it grants Ability Score
+        // Improvements) from 5etools class/class-<name>.json, cache it, and push the
+        // resolved count for the current level into Alpine state so the budget counter
+        // reacts. Cache shape: { _v:1, [className]: [levels] }.
+        function loadClassAsi(className) {
+            const cacheKey = 'classAsiJson';
+            let cache = {};
+            try {
+                cache = JSON.parse(localStorage.getItem(cacheKey)) ?? {};
+            } catch (error) {
+                console.error('Corrupt ' + cacheKey + ' cache, clearing:', error);
+                localStorage.removeItem(cacheKey);
+            }
+            const apply = function (levels) {
+                cache[className] = levels;
+                cache._v = 1;
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(cache));
+                } catch (error) {
+                    console.error('Failed to cache class ASI data:', error);
+                }
+                updateAsiCount(levels);
+            };
+            if (Array.isArray(cache[className])) {
+                updateAsiCount(cache[className]);
+                return;
+            }
+            const url = DATA_BASE + "class/class-" + className.toLowerCase() + ".json";
+            fetch(url)
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Network response was not ok ' + response.statusText);
+                    return response.json();
+                })
+                .then(function (data) {
+                    const levels = (data.classFeature || [])
+                        .filter(function (f) { return f.name === "Ability Score Improvement"; })
+                        .map(function (f) { return f.level; })
+                        .sort(function (a, b) { return a - b; });
+                    apply(levels);
+                })
+                .catch(function (error) {
+                    console.error('Failed to load class ASI data for ' + className + ':', error);
+                    updateAsiCount([]);
+                });
+        }
+
+        // Set character.asiCount = number of ASI levels <= current level, reactively.
+        function updateAsiCount(levels) {
+            const root = document.querySelector('[x-data="characterState"]');
+            if (!root || !window.Alpine) return;
+            const data = Alpine.$data(root);
+            const lvl = Number(levelInput.value) || 1;
+            data.character.asiCount = (levels || []).filter(function (l) { return l <= lvl; }).length;
         }
 
         classes.forEach(cls => {
@@ -1354,9 +1518,18 @@
                 subclassSelect.appendChild(option);
             });
             updateClassLevelDisplay();
+            loadClassAsi(className);
         });
         subclassSelect.addEventListener('change', updateClassLevelDisplay);
-        levelInput.addEventListener('input', updateClassLevelDisplay);
+        levelInput.addEventListener('input', function () {
+            updateClassLevelDisplay();
+            const match = /^(.+?)\s+\(([^)]+)\)$/.exec(select.value || '');
+            if (!match) return;
+            const cache = JSON.parse(localStorage.getItem('classAsiJson')) ?? {};
+            if (Array.isArray(cache[match[1]])) {
+                updateAsiCount(cache[match[1]]);
+            }
+        });
 
 
         Sortable.create(document.getElementById("listWithHandle"), {
