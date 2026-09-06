@@ -33,87 +33,314 @@
 
     <main>
 
-        <div id="name-container" class="flex items-start pt-4 pb-4 ">
+        <div x-data="characterState" class="max-w-4xl mx-auto px-4">
 
-            <input type="text" placeholder="Name" aria-label="Name"
-            class="w-1/3 text-xl p-2 border border-gray-300 rounded-md
-            focus:outline-none
-            focus:ring-2 focus:ring-blue-500">
-
-            <div class="flex w-2/3 pl-4 pr-4">
-                <div class="w-1/3 flex flex-col space-y-1 pr-2">
-                    <input
-                        type="text"
-                        aria-label="Class & Level"
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder=""
-                    >
-                    <span class="text-xs text-gray-500 uppercase">Class &amp; Level</span>
-
-                    <input
-                        type="text"
-                        aria-label="Race"
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder=""
-                    >
-                    <span class="text-xs text-gray-500 uppercase">Race</span>
-
+            <!-- 1. Identity -->
+            <section class="pt-4 pb-4 border-b border-gray-200">
+                <div class="flex items-start gap-4">
+                    <div class="w-1/3 flex flex-col space-y-1">
+                        <input type="text" x-model="character.name" aria-label="Name" placeholder="Character Name"
+                            class="w-full text-xl p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <span class="text-xs text-gray-500 uppercase">Character Name</span>
+                        <button @click="saveCharacter()" type="button"
+                            class="mt-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 cursor-pointer">
+                            <span x-text="saved ? 'Saved!' : 'Save Character'">Save Character</span>
+                        </button>
+                    </div>
+                    <div class="w-2/3 grid grid-cols-3 gap-2">
+                        <div class="flex flex-col space-y-1">
+                            <input type="text" aria-label="Class & Level" placeholder=""
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <span class="text-xs text-gray-500 uppercase">Class &amp; Level</span>
+                        </div>
+                        <div class="flex flex-col space-y-1">
+                            <select x-model="character.background" aria-label="Background"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select a background…</option>
+                                <template x-for="b in backgrounds" :key="b.name"><option :value="b.name" x-text="b.name"></option></template>
+                            </select>
+                            <span class="text-xs text-gray-500 uppercase">Background</span>
+                        </div>
+                        <div class="flex flex-col space-y-1">
+                            <input type="text" x-model="character.playerName" aria-label="Player Name" placeholder=""
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <span class="text-xs text-gray-500 uppercase">Player Name</span>
+                        </div>
+                        <div class="flex flex-col space-y-1">
+                            <select x-model="character.race" aria-label="Race"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select a race…</option>
+                                <template x-for="r in races" :key="r.name"><option :value="r.name" x-text="r.name"></option></template>
+                            </select>
+                            <span class="text-xs text-gray-500 uppercase">Race</span>
+                            <div x-show="availableSubraces().length > 0" class="flex flex-col space-y-1 mt-1">
+                                <select x-model="character.subrace" aria-label="Subrace"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">—</option>
+                                    <template x-for="s in availableSubraces()" :key="s.name"><option :value="s.name" x-text="displaySubraceName(s)"></option></template>
+                                </select>
+                                <span class="text-xs text-gray-500 uppercase">Subrace</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-1">
+                            <input type="text" x-model="character.alignment" aria-label="Alignment" placeholder=""
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <span class="text-xs text-gray-500 uppercase">Alignment</span>
+                        </div>
+                        <div class="flex flex-col space-y-1">
+                            <input type="text" x-model="character.xp" aria-label="XP" placeholder=""
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <span class="text-xs text-gray-500 uppercase">XP</span>
+                        </div>
+                    </div>
                 </div>
+            </section>
 
-                <div class="w-1/3 flex flex-col space-y-1 pr-2">
-                    <input
-                        type="text"
-                        aria-label="Background"
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder=""
-                    >
-                    <span class="text-xs text-gray-500 uppercase">Background</span>
-
-                    <input
-                        type="text"
-                        aria-label="Alignment"
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder=""
-                    >
-                    <span class="text-xs text-gray-500 uppercase">Alignment</span>
-
+            <!-- 2. Class & Subclass -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Class &amp; Subclass</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex flex-col space-y-1">
+                        <label for="selectedClasses" class="text-xs text-gray-500 uppercase">Class</label>
+                        <select id="selectedClasses" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </select>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <label for="selectedSubclasses" class="text-xs text-gray-500 uppercase">Subclass</label>
+                        <select id="selectedSubclasses" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </select>
+                    </div>
                 </div>
+            </section>
 
-                <div class="w-1/3 flex flex-col space-y-1 pr-2">
-                    <input
-                        type="text"
-                        aria-label="Player Name"
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder=""
-                    >
-                    <span class="text-xs text-gray-500 uppercase">Player Name</span>
-
-                    <input
-                        type="text"
-                        aria-label="XP"
-                        class="w-full px-3 py-2 mb-0 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder=""
-                    >
-                    <span class="text-xs text-gray-500 uppercase">XP</span>
-
+            <!-- 3. Ability Scores -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Ability Scores</h2>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    <template x-for="a in abilityList" :key="a.key">
+                        <div class="border border-gray-300 rounded-md p-2 text-center">
+                            <div class="font-semibold" x-text="a.full"></div>
+                            <input type="number" min="1" max="30" x-model.number="character.abilities[a.key].base" :aria-label="a.full + ' base'"
+                                class="w-full text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <div class="text-xs text-gray-500 h-4" x-text="character.asi[a.key] ? '+' + character.asi[a.key] : ''"></div>
+                            <div class="text-lg font-bold" x-text="modLabel(a.key)"></div>
+                            <div class="text-xs text-gray-500">Total <span x-text="abilityTotal(a.key) ?? '—'"></span></div>
+                        </div>
+                    </template>
                 </div>
+                <div class="mt-2 text-sm">Proficiency Bonus: <span class="font-semibold" x-text="'+' + proficiencyBonus()"></span></div>
+                <div x-show="asiChoiceSlots().length > 0" class="mt-2">
+                    <span class="text-xs text-gray-500 uppercase">Ability Score Increase choices</span>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        <template x-for="slot in asiChoiceSlots()" :key="slot.key">
+                            <select x-model="character.asiChoices[slot.key]" aria-label="ASI choice"
+                                class="border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choose…</option>
+                                <template x-for="a in slot.from" :key="a"><option :value="a" x-text="abilityLabel(a)"></option></template>
+                            </select>
+                        </template>
+                    </div>
+                </div>
+            </section>
 
-            </div>
+            <!-- 3. Saving Throws -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Saving Throws <span class="normal-case font-normal text-gray-400">(proficiency added with class)</span></h2>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    <template x-for="a in abilityList" :key="'save-' + a.key">
+                        <div class="text-center">
+                            <div class="font-semibold" x-text="a.full"></div>
+                            <div class="text-lg font-bold" x-text="modLabel(a.key)"></div>
+                        </div>
+                    </template>
+                </div>
+            </section>
 
-        </div>
+            <!-- 4. Skills -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Skills</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                    <template x-for="skill in skillList" :key="skill.key">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" :checked="isSkillProficient(skill)" @change="character.skillProfs[skill.key] = $event.target.checked" :aria-label="skill.name + ' proficiency'"
+                                class="h-4 w-4 cursor-pointer">
+                            <span class="flex-1" x-text="skill.name"></span>
+                            <span class="text-xs text-gray-500 w-8 text-center" x-text="abilityLabel(skill.ability)"></span>
+                            <span class="font-semibold w-8 text-center" x-text="skillBonusLabel(skill)"></span>
+                        </div>
+                    </template>
+                </div>
+            </section>
 
-        <div class="max-w-md mx-auto space-y-6 mb-4">
-            <div>
-                <label for="selectedClasses" class="block font-medium mb-2">Class</label>
-                <select id="selectedClasses" class="w-full border rounded p-2">
-                </select>
-            </div>
+            <!-- 5. Passive Perception -->
+            <section class="py-4 border-b border-gray-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 uppercase">Passive Wisdom (Perception)</span>
+                    <span class="font-semibold text-lg" x-text="passivePerception()"></span>
+                </div>
+            </section>
 
-            <div>
-                <label for="selectedSubclasses" class="block font-medium mb-2">Subclass</label>
-                <select id="selectedSubclasses" class="w-full border rounded p-2">
-                </select>
-            </div>
+            <!-- 6. Proficiencies & Languages -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Other Proficiencies &amp; Languages</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase">Languages</span>
+                        <div x-text="allLanguages() || '—'"></div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase">Proficiencies</span>
+                        <div x-text="allProficiencies() || '—'"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. Combat -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Combat</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Armor Class</span>
+                        <input type="number" x-model.number="character.armorClass" aria-label="Armor Class"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <div class="text-xs text-gray-500">Unarmored: <span x-text="10 + (abilityMod('dex') ?? 0)"></span></div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase">Initiative</span>
+                        <div class="text-lg font-semibold" x-text="initiativeLabel()"></div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase">Speed</span>
+                        <div class="text-lg font-semibold" x-text="character.race ? character.speed + ' ft.' : '—'"></div>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Hit Points (Max / Current)</span>
+                        <div class="flex gap-2">
+                            <input type="number" x-model.number="character.hpMax" aria-label="Hit Points Max"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="number" x-model.number="character.hpCurrent" aria-label="Hit Points Current"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. Characterization -->
+            <section class="py-4 border-b border-gray-200">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Features &amp; Traits</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase">Racial Traits</span>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <template x-for="t in character.traits" :key="t.name"><li class="font-medium" x-text="t.name"></li></template>
+                        </ul>
+                        <div class="mt-2 text-sm">
+                            <span class="text-xs text-gray-500 uppercase">Size</span> <span x-text="sizeLabel()"></span> ·
+                            <span class="text-xs text-gray-500 uppercase">Darkvision</span> <span x-text="character.darkvision ? character.darkvision + ' ft.' : '—'"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-500 uppercase" x-text="'Feature: ' + character.bgFeature.name"></span>
+                        <div x-text="character.bgFeature.text"></div>
+                        <div class="mt-2 text-sm">
+                            <span class="text-xs text-gray-500 uppercase">Background Equipment</span>
+                            <span x-text="character.bgEquipment || '—'"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Personality Traits</span>
+                        <textarea x-model="character.personalityTraits" aria-label="Personality Traits" rows="2"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Ideals</span>
+                        <input type="text" x-model="character.ideals" aria-label="Ideals"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Bonds</span>
+                        <input type="text" x-model="character.bonds" aria-label="Bonds"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Flaws</span>
+                        <input type="text" x-model="character.flaws" aria-label="Flaws"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. Character Details -->
+            <section class="py-4 pb-8">
+                <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Character Details</h2>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Age</span>
+                        <input type="text" x-model="character.age" aria-label="Age"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Height</span>
+                        <input type="text" x-model="character.height" aria-label="Height"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Weight</span>
+                        <input type="text" x-model="character.weight" aria-label="Weight"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Eyes</span>
+                        <input type="text" x-model="character.eyes" aria-label="Eyes"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Skin</span>
+                        <input type="text" x-model="character.skin" aria-label="Skin"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Hair</span>
+                        <input type="text" x-model="character.hair" aria-label="Hair"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Symbol</span>
+                        <input type="text" x-model="character.symbol" aria-label="Symbol"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Character Appearance</span>
+                        <textarea x-model="character.appearance" aria-label="Character Appearance" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Allies &amp; Organizations</span>
+                        <textarea x-model="character.allies" aria-label="Allies & Organizations" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Additional Features &amp; Traits</span>
+                        <textarea x-model="character.additionalTraits" aria-label="Additional Features & Traits" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Character Backstory</span>
+                        <textarea x-model="character.backstory" aria-label="Character Backstory" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-xs text-gray-500 uppercase">Treasure</span>
+                        <textarea x-model="character.treasure" aria-label="Treasure" rows="2"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                </div>
+            </section>
+
         </div>
 
         <div id="listWithHandle" class="p-12 max-w-4xl mx-auto">
@@ -293,14 +520,7 @@
             item.remove();
         }
 
-        async function getJsonData(url, name) {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error('Network response was not ok ' + response.statusText);
-            }
-            const data = await response.json();
-            localStorage.setItem(name, JSON.stringify(data));
-        }
+        const DATA_BASE = "https://raw.githubusercontent.com/5etools-mirror-3/5etools-2014-src/refs/heads/main/data/";
 
         async function getJsonData(url, name) {
             const response = await fetch(url);
@@ -310,6 +530,631 @@
             const data = await response.json();
             localStorage.setItem(name, JSON.stringify(data));
         }
+
+        // ---- Stage 1: normalized character-creation data (races + backgrounds) ----
+        // NOTE: `entries` is kept verbatim as unsanitized 5etools markup ({@...} tags).
+        // Later stages must convert tags and render with textContent — never innerHTML/x-html.
+
+        function pickRace(r) {
+            return {
+                name: r.name,
+                source: r.source,
+                page: r.page,
+                size: r.size,
+                speed: r.speed,
+                ability: r.ability,
+                darkvision: r.darkvision,
+                skillProficiencies: r.skillProficiencies,
+                toolProficiencies: r.toolProficiencies,
+                languageProficiencies: r.languageProficiencies,
+                weaponProficiencies: r.weaponProficiencies,
+                armorProficiencies: r.armorProficiencies,
+                resist: r.resist,
+                entries: r.entries,
+            };
+        }
+
+        function pickSubrace(s) {
+            return {
+                name: s.name,
+                source: s.source,
+                raceName: s.raceName,
+                raceSource: s.raceSource,
+                page: s.page,
+                size: s.size,
+                speed: s.speed,
+                ability: s.ability,
+                darkvision: s.darkvision,
+                skillProficiencies: s.skillProficiencies,
+                toolProficiencies: s.toolProficiencies,
+                languageProficiencies: s.languageProficiencies,
+                weaponProficiencies: s.weaponProficiencies,
+                armorProficiencies: s.armorProficiencies,
+                resist: s.resist,
+                entries: s.entries,
+            };
+        }
+
+        function pickBackground(b) {
+            return {
+                name: b.name,
+                source: b.source,
+                skillProficiencies: b.skillProficiencies,
+                toolProficiencies: b.toolProficiencies,
+                languageProficiencies: b.languageProficiencies,
+                entries: b.entries,
+            };
+        }
+
+        function normalizeRaces(data) {
+            if (!data || !Array.isArray(data.race) || !Array.isArray(data.subrace)) {
+                throw new Error('Unexpected races.json shape');
+            }
+            const race = data.race
+                .filter(function (r) { return r.source === "PHB"; })
+                .map(pickRace);
+            const subrace = data.subrace
+                .filter(function (s) { return s.source === "PHB" && s.raceSource === "PHB" && s.name; })
+                .map(pickSubrace);
+            return { race: race, subrace: subrace };
+        }
+
+        function normalizeBackgrounds(data) {
+            if (!data || !Array.isArray(data.background)) {
+                throw new Error('Unexpected backgrounds.json shape');
+            }
+            const background = data.background
+                .filter(function (b) { return b.source === "PHB"; })
+                .map(pickBackground);
+            return { background: background };
+        }
+
+        function isValidRacesCache(cached) {
+            return cached && cached._v === 1 && Array.isArray(cached.race) && Array.isArray(cached.subrace);
+        }
+
+        function isValidBackgroundsCache(cached) {
+            return cached && cached._v === 1 && Array.isArray(cached.background);
+        }
+
+        async function loadNormalized(url, cacheKey, normalizeFn, validateFn) {
+            try {
+                const cached = JSON.parse(localStorage.getItem(cacheKey));
+                if (validateFn(cached)) {
+                    return cached;
+                }
+            } catch (error) {
+                console.warn('Corrupt ' + cacheKey + ' cache, clearing:', error);
+                localStorage.removeItem(cacheKey);
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                const data = await response.json();
+                const payload = normalizeFn(data);
+                payload._v = 1;
+                localStorage.setItem(cacheKey, JSON.stringify(payload));
+                return payload;
+            } catch (error) {
+                console.error('Failed to load ' + cacheKey + ':', error);
+                return null;
+            }
+        }
+
+        // ---- Stage 2: race + subrace component (Alpine) ----
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('characterData', {
+                races: [],
+                subraces: [],
+                backgrounds: [],
+            });
+
+            Alpine.data('characterState', () => ({
+                character: {
+                    name: '',
+                    background: null,
+                    playerName: '',
+                    race: null,
+                    subrace: null,
+                    alignment: '',
+                    xp: '',
+                    asi: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+                    asiChoices: {},
+                    speed: 30,
+                    size: '',
+                    darkvision: 0,
+                    languages: [],
+                    traits: [],
+                    raceProfs: { skills: [], tools: [], weapons: [], armor: [] },
+                    bgSkillProfs: [],
+                    bgToolProfs: [],
+                    bgLanguages: [],
+                    bgFeature: { name: '', text: '' },
+                    bgEquipment: '',
+                    personalityTraits: '',
+                    ideals: '',
+                    bonds: '',
+                    flaws: '',
+                    abilities: { str: { base: 10 }, dex: { base: 10 }, con: { base: 10 }, int: { base: 10 }, wis: { base: 10 }, cha: { base: 10 } },
+                    skillProfs: {},
+                    hpMax: null,
+                    hpCurrent: null,
+                    armorClass: null,
+                    age: '',
+                    height: '',
+                    weight: '',
+                    eyes: '',
+                    skin: '',
+                    hair: '',
+                    symbol: '',
+                    appearance: '',
+                    allies: '',
+                    additionalTraits: '',
+                    backstory: '',
+                    treasure: '',
+                },
+
+                saved: false,
+
+                abilityList: [
+                    { key: 'str', label: 'Str', full: 'Strength' },
+                    { key: 'dex', label: 'Dex', full: 'Dexterity' },
+                    { key: 'con', label: 'Con', full: 'Constitution' },
+                    { key: 'int', label: 'Int', full: 'Intelligence' },
+                    { key: 'wis', label: 'Wis', full: 'Wisdom' },
+                    { key: 'cha', label: 'Cha', full: 'Charisma' },
+                ],
+
+                skillList: [
+                    { key: 'acrobatics', ability: 'dex', name: 'Acrobatics' },
+                    { key: 'animalhandling', ability: 'wis', name: 'Animal Handling' },
+                    { key: 'arcana', ability: 'int', name: 'Arcana' },
+                    { key: 'athletics', ability: 'str', name: 'Athletics' },
+                    { key: 'deception', ability: 'cha', name: 'Deception' },
+                    { key: 'history', ability: 'int', name: 'History' },
+                    { key: 'insight', ability: 'wis', name: 'Insight' },
+                    { key: 'intimidation', ability: 'cha', name: 'Intimidation' },
+                    { key: 'investigation', ability: 'int', name: 'Investigation' },
+                    { key: 'medicine', ability: 'wis', name: 'Medicine' },
+                    { key: 'nature', ability: 'int', name: 'Nature' },
+                    { key: 'perception', ability: 'wis', name: 'Perception' },
+                    { key: 'performance', ability: 'cha', name: 'Performance' },
+                    { key: 'persuasion', ability: 'cha', name: 'Persuasion' },
+                    { key: 'religion', ability: 'int', name: 'Religion' },
+                    { key: 'sleightofhand', ability: 'dex', name: 'Sleight of Hand' },
+                    { key: 'stealth', ability: 'dex', name: 'Stealth' },
+                    { key: 'survival', ability: 'wis', name: 'Survival' },
+                ],
+
+                init() {
+                    this.seedFromCache();
+                    this.loadCharacter();
+                    this.$watch('character.race', () => this.onRaceChange());
+                    this.$watch('character.subrace', () => this.onSubraceChange());
+                    this.$watch('character.background', () => this.recomputeBackground());
+                    this.$watch('character.asiChoices', () => this.recompute());
+                },
+
+                seedFromCache() {
+                    try {
+                        const rd = JSON.parse(localStorage.getItem('racesJson')) ?? {};
+                        this.$store.characterData.races = (rd && Array.isArray(rd.race))
+                            ? rd.race.slice().sort((a, b) => a.name.localeCompare(b.name))
+                            : [];
+                        this.$store.characterData.subraces = (rd && Array.isArray(rd.subrace))
+                            ? rd.subrace.slice().sort((a, b) => a.name.localeCompare(b.name))
+                            : [];
+                    } catch {
+                        this.$store.characterData.races = [];
+                        this.$store.characterData.subraces = [];
+                    }
+                    try {
+                        const bd = JSON.parse(localStorage.getItem('backgroundsJson')) ?? {};
+                        this.$store.characterData.backgrounds = (bd && Array.isArray(bd.background))
+                            ? bd.background.slice().sort((a, b) => a.name.localeCompare(b.name))
+                            : [];
+                    } catch {
+                        this.$store.characterData.backgrounds = [];
+                    }
+                },
+
+                loadCharacter() {
+                    try {
+                        const saved = JSON.parse(localStorage.getItem('characterJson'));
+                        if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+                            Object.assign(this.character, saved);
+                        }
+                    } catch {
+                        // corrupt or missing — keep defaults
+                    }
+                },
+
+                saveCharacter() {
+                    try {
+                        localStorage.setItem('characterJson', JSON.stringify(this.character));
+                        this.saved = true;
+                        setTimeout(() => { this.saved = false; }, 1500);
+                    } catch (error) {
+                        console.error('Failed to save character:', error);
+                    }
+                },
+
+                get races() { return this.$store.characterData.races; },
+                get subraces() { return this.$store.characterData.subraces; },
+                get backgrounds() { return this.$store.characterData.backgrounds; },
+
+                availableSubraces() {
+                    return this.character.race
+                        ? this.subraces.filter((s) => s.raceName === this.character.race)
+                        : [];
+                },
+
+                selectedRaceObj() {
+                    return this.races.find((r) => r.name === this.character.race) || null;
+                },
+
+                selectedSubraceObj() {
+                    return this.subraces.find(
+                        (s) => s.name === this.character.subrace && s.raceName === this.character.race
+                    ) || null;
+                },
+
+                selectedBackgroundObj() {
+                    return this.backgrounds.find((b) => b.name === this.character.background) || null;
+                },
+
+                displaySubraceName(s) {
+                    return (s.name === 'Variant' && s.raceName === 'Human') ? 'Variant Human' : s.name;
+                },
+
+                sizeLabel() {
+                    const map = { S: 'Small', M: 'Medium', L: 'Large' };
+                    return map[this.character.size] || this.character.size || '—';
+                },
+
+                onRaceChange() {
+                    this.character.subrace = null;
+                    this.character.asiChoices = {};
+                    this.recompute();
+                },
+
+                onSubraceChange() {
+                    this.character.asiChoices = {};
+                    this.recompute();
+                },
+
+                recompute() {
+                    const race = this.selectedRaceObj();
+                    const subrace = this.selectedSubraceObj();
+                    this.character.asi = { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 };
+                    this.character.speed = 30;
+                    this.character.size = '';
+                    this.character.darkvision = 0;
+                    this.character.languages = [];
+                    this.character.traits = [];
+                    this.character.raceProfs = { skills: [], tools: [], weapons: [], armor: [] };
+                    if (race) {
+                        this.applyAsi(race, 'race');
+                        if (subrace) this.applyAsi(subrace, 'subrace');
+                        this.character.speed = this.resolveSpeed(subrace, race);
+                        this.character.size = (race.size && race.size[0]) ? race.size[0] : '';
+                        this.character.darkvision = this.resolveDarkvision(subrace, race);
+                        this.character.languages = this.resolveLanguages(subrace, race);
+                        this.character.traits = this.resolveTraits(subrace, race);
+                        this.character.raceProfs = this.resolveProfs(subrace, race);
+                    }
+                },
+
+                applyAsi(obj, prefix) {
+                    const a = obj && obj.ability;
+                    if (!a) return;
+                    a.forEach((asiObj, blockIdx) => {
+                        Object.keys(asiObj || {}).forEach((key) => {
+                            if (key === 'choose' || key === 'amount') return;
+                            const val = asiObj[key];
+                            if (typeof val === 'number' && this.character.asi[key] !== undefined) {
+                                this.character.asi[key] += val;
+                            }
+                        });
+                        if (asiObj && asiObj.choose) {
+                            const count = asiObj.choose.count || 0;
+                            const from = asiObj.choose.from || [];
+                            const amount = asiObj.amount ?? 1;
+                            for (let i = 0; i < count; i++) {
+                                const slotKey = prefix + blockIdx + '_' + i;
+                                const chosen = this.character.asiChoices[slotKey];
+                                if (chosen && from.indexOf(chosen) !== -1 && this.character.asi[chosen] !== undefined) {
+                                    this.character.asi[chosen] += amount;
+                                }
+                            }
+                        }
+                    });
+                },
+
+                asiChoiceSlots() {
+                    const slots = [];
+                    const addBlock = (obj, prefix) => {
+                        (obj && obj.ability || []).forEach((asiObj, blockIdx) => {
+                            if (asiObj && asiObj.choose) {
+                                const count = asiObj.choose.count || 0;
+                                const from = asiObj.choose.from || [];
+                                const amount = asiObj.amount ?? 1;
+                                for (let i = 0; i < count; i++) {
+                                    slots.push({ key: prefix + blockIdx + '_' + i, from: from, amount: amount });
+                                }
+                            }
+                        });
+                    };
+                    addBlock(this.selectedRaceObj(), 'race');
+                    addBlock(this.selectedSubraceObj(), 'subrace');
+                    return slots;
+                },
+
+                resolveSpeed(subrace, race) {
+                    const raw = (subrace && subrace.speed) ?? (race && race.speed);
+                    if (typeof raw === 'number') return raw;
+                    if (raw && typeof raw.walk === 'number') return raw.walk;
+                    return 30;
+                },
+
+                resolveDarkvision(subrace, race) {
+                    const subraceOverwrites = subrace && (subrace.entries || []).some(
+                        (e) => e && e.data && e.data.overwrite === 'Darkvision'
+                    );
+                    if (subraceOverwrites && typeof subrace.darkvision === 'number') return subrace.darkvision;
+                    const raceDv = (race && typeof race.darkvision === 'number') ? race.darkvision : 0;
+                    const subraceDv = (subrace && typeof subrace.darkvision === 'number') ? subrace.darkvision : 0;
+                    return Math.max(raceDv, subraceDv);
+                },
+
+                resolveLanguages(subrace, race) {
+                    const out = [];
+                    const add = (obj) => {
+                        (obj && obj.languageProficiencies || []).forEach((lp) => {
+                            Object.keys(lp || {}).forEach((key) => {
+                                if (key === 'any' || key === 'anyStandard') {
+                                    out.push(lp[key] + ' of your choice');
+                                } else if (lp[key] === true) {
+                                    out.push(key.charAt(0).toUpperCase() + key.slice(1));
+                                }
+                            });
+                        });
+                    };
+                    add(race);
+                    add(subrace);
+                    return out;
+                },
+
+                resolveTraits(subrace, race) {
+                    const traits = (race && race.entries) ? race.entries.slice() : [];
+                    (subrace && subrace.entries || []).forEach((se) => {
+                        const overwrite = se && se.data && se.data.overwrite;
+                        if (overwrite) {
+                            const idx = traits.findIndex((t) => t && t.name === overwrite);
+                            if (idx !== -1) traits[idx] = se;
+                            else traits.push(se);
+                        } else {
+                            traits.push(se);
+                        }
+                    });
+                    return traits;
+                },
+
+                resolveProfs(subrace, race) {
+                    const out = { skills: [], tools: [], weapons: [], armor: [] };
+                    const collect = (arr, dest) => {
+                        (arr || []).forEach((p) => {
+                            Object.keys(p || {}).forEach((k) => {
+                                if (p[k] === true) dest.push(k);
+                                else if (k === 'choose' && p[k] && typeof p[k].count === 'number') {
+                                    dest.push('choose ' + p[k].count + ' from: ' + (p[k].from || []).join(', '));
+                                }
+                            });
+                        });
+                    };
+                    const add = (obj) => {
+                        if (!obj) return;
+                        collect(obj.skillProficiencies, out.skills);
+                        collect(obj.toolProficiencies, out.tools);
+                        collect(obj.weaponProficiencies, out.weapons);
+                        collect(obj.armorProficiencies, out.armor);
+                    };
+                    add(race);
+                    add(subrace);
+                    return out;
+                },
+
+                allLanguages() {
+                    const combined = [].concat(this.character.languages || []).concat(this.character.bgLanguages || []);
+                    return combined.length ? combined.join(', ') : '';
+                },
+
+                allProficiencies() {
+                    const p = this.character.raceProfs || { skills: [], tools: [], weapons: [], armor: [] };
+                    const parts = []
+                        .concat(p.skills.map((s) => 'Skill: ' + s))
+                        .concat(p.tools.map((s) => 'Tool: ' + s))
+                        .concat(p.weapons.map((s) => 'Weapon: ' + s))
+                        .concat(p.armor.map((s) => 'Armor: ' + s))
+                        .concat((this.character.bgSkillProfs || []).map((s) => 'Skill: ' + s))
+                        .concat((this.character.bgToolProfs || []).map((s) => 'Tool: ' + s));
+                    return parts.length ? parts.join(', ') : '';
+                },
+
+                recomputeBackground() {
+                    const bg = this.selectedBackgroundObj();
+                    this.character.bgSkillProfs = [];
+                    this.character.bgToolProfs = [];
+                    this.character.bgLanguages = [];
+                    this.character.bgFeature = { name: '', text: '' };
+                    this.character.bgEquipment = '';
+                    this.character.personalityTraits = '';
+                    this.character.ideals = '';
+                    this.character.bonds = '';
+                    this.character.flaws = '';
+                    if (!bg) return;
+                    this.character.bgSkillProfs = this.profKeys(bg.skillProficiencies);
+                    this.character.bgToolProfs = this.profKeys(bg.toolProficiencies);
+                    this.character.bgLanguages = this.langKeys(bg.languageProficiencies);
+                    this.character.bgFeature = this.featureInfo(bg.entries);
+                    this.character.bgEquipment = this.equipmentText(bg.entries);
+                    const seed = (caption) => {
+                        const rows = this.characteristicTable(bg.entries, caption);
+                        return rows.length ? this.stripMarkup(rows[0]) : '';
+                    };
+                    this.character.personalityTraits = seed('Personality Trait');
+                    this.character.ideals = seed('Ideal');
+                    this.character.bonds = seed('Bond');
+                    this.character.flaws = seed('Flaw');
+                },
+
+                profKeys(arr) {
+                    const out = [];
+                    (arr || []).forEach((p) => {
+                        Object.keys(p || {}).forEach((k) => {
+                            if (p[k] === true) {
+                                out.push(k.charAt(0).toUpperCase() + k.slice(1));
+                            } else if (k === 'choose' && p[k] && typeof p[k].count === 'number') {
+                                const from = (p[k].from || []).join(', ');
+                                out.push('Choose ' + p[k].count + (from ? ' from: ' + from : '') + ' (your choice)');
+                            }
+                        });
+                    });
+                    return out;
+                },
+
+                langKeys(arr) {
+                    const out = [];
+                    (arr || []).forEach((lp) => {
+                        Object.keys(lp || {}).forEach((key) => {
+                            if (key === 'any' || key === 'anyStandard') {
+                                out.push(lp[key] + ' of your choice');
+                            } else if (lp[key] === true) {
+                                out.push(key.charAt(0).toUpperCase() + key.slice(1));
+                            }
+                        });
+                    });
+                    return out;
+                },
+
+                equipmentText(entries) {
+                    const eq = (entries || []).find((e) => e && e.name === 'Equipment');
+                    if (!eq) return '';
+                    const list = Array.isArray(eq.entries) ? eq.entries : [eq.entries];
+                    return this.stripMarkup(list.filter((e) => typeof e === 'string').join(' '));
+                },
+
+                featureInfo(entries) {
+                    const feat = (entries || []).find(
+                        (e) => e && typeof e.name === 'string' && e.name.indexOf('Feature:') === 0
+                    );
+                    if (!feat) return { name: '', text: '' };
+                    const name = feat.name.replace(/^Feature:\s*/, '');
+                    const list = Array.isArray(feat.entries) ? feat.entries : [feat.entries];
+                    const text = this.stripMarkup(list.filter((e) => typeof e === 'string').join(' '));
+                    return { name: name, text: text };
+                },
+
+                characteristicTable(entries, caption) {
+                    const sc = (entries || []).find((e) => e && e.name === 'Suggested Characteristics');
+                    if (!sc) return [];
+                    const table = (sc.entries || []).find(
+                        (t) => t && t.type === 'table' && t.caption === caption
+                    );
+                    if (!table || !Array.isArray(table.rows)) return [];
+                    return table.rows.map((row) => (Array.isArray(row) ? row[1] : '')).filter(Boolean);
+                },
+
+                stripMarkup(text) {
+                    if (!text) return '';
+                    return text.replace(new RegExp('\\{@[^}]*\\}', 'g'), (m) => {
+                        const inner = m.slice(2, -1);
+                        const space = inner.indexOf(' ');
+                        const name = space === -1 ? inner : inner.slice(space + 1);
+                        const pipe = name.indexOf('|');
+                        return (pipe === -1 ? name : name.slice(0, pipe)).trim();
+                    }).trim();
+                },
+
+                abilityLabel(key) {
+                    const a = this.abilityList.find((x) => x.key === key);
+                    return a ? a.label : key;
+                },
+
+                abilityTotal(key) {
+                    const a = this.character.abilities[key];
+                    const base = (a && typeof a.base === 'number' && isFinite(a.base)) ? a.base : null;
+                    if (base === null) return null;
+                    return base + (this.character.asi[key] || 0);
+                },
+
+                abilityMod(key) {
+                    const total = this.abilityTotal(key);
+                    if (total === null) return null;
+                    return Math.floor((total - 10) / 2);
+                },
+
+                modLabel(key) {
+                    const m = this.abilityMod(key);
+                    if (m === null) return '—';
+                    return (m >= 0 ? '+' : '') + m;
+                },
+
+                proficiencyBonus() { return 2; },
+
+                skillKey(s) {
+                    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                },
+
+                fixedProficiencyKeys(arr) {
+                    const out = [];
+                    (arr || []).forEach((p) => {
+                        Object.keys(p || {}).forEach((k) => {
+                            if (p[k] === true) out.push(this.skillKey(k));
+                        });
+                    });
+                    return out;
+                },
+
+                autoSkillProfs() {
+                    const set = new Set();
+                    const race = this.selectedRaceObj();
+                    const subrace = this.selectedSubraceObj();
+                    const bg = this.selectedBackgroundObj();
+                    [race, subrace].forEach((obj) => {
+                        this.fixedProficiencyKeys(obj && obj.skillProficiencies).forEach((k) => set.add(k));
+                    });
+                    if (bg) this.fixedProficiencyKeys(bg.skillProficiencies).forEach((k) => set.add(k));
+                    return set;
+                },
+
+                isSkillProficient(skill) {
+                    return this.autoSkillProfs().has(skill.key) || !!this.character.skillProfs[skill.key];
+                },
+
+                skillBonus(skill) {
+                    const mod = this.abilityMod(skill.ability) || 0;
+                    return mod + (this.isSkillProficient(skill) ? this.proficiencyBonus() : 0);
+                },
+
+                skillBonusLabel(skill) {
+                    const b = this.skillBonus(skill);
+                    return (b >= 0 ? '+' : '') + b;
+                },
+
+                passivePerception() {
+                    const p = this.skillList.find((s) => s.key === 'perception');
+                    return 10 + this.skillBonus(p);
+                },
+
+                initiativeLabel() {
+                    return this.modLabel('dex');
+                },
+            }));
+        });
 
         function tooltip (element) {
 
@@ -332,8 +1177,10 @@
 
         async function startup () {
 
-            const itemsBaseJsonUrl = "https://raw.githubusercontent.com/5etools-mirror-3/5etools-2014-src/refs/heads/main/data/items.json"
-            const classesLookupJsonUrl = "https://raw.githubusercontent.com/5etools-mirror-3/5etools-2014-src/refs/heads/main/data/generated/gendata-subclass-lookup.json"
+            const itemsBaseJsonUrl = DATA_BASE + "items.json";
+            const classesLookupJsonUrl = DATA_BASE + "generated/gendata-subclass-lookup.json";
+            const racesJsonUrl = DATA_BASE + "races.json";
+            const backgroundsJsonUrl = DATA_BASE + "backgrounds.json";
 
 
             if (!localStorage.getItem("equipmentJson")) {
@@ -420,6 +1267,28 @@
                     addItemToInventory(li);
                 }
             });
+
+            // Stage 1: character-creation data (races + backgrounds), cache-first + normalized.
+            // Runs after search setup so a cold start can search equipment while these download.
+            const racesData = await loadNormalized(racesJsonUrl, 'racesJson', normalizeRaces, isValidRacesCache);
+
+            // Push race data into the Alpine store so the character component
+            // updates if it initialized before the fetch completed (cold start).
+            if (window.Alpine && Alpine.store && racesData) {
+                const store = Alpine.store('characterData');
+                if (store) {
+                    store.races = (racesData.race || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+                    store.subraces = (racesData.subrace || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+                }
+            }
+
+            const backgroundsData = await loadNormalized(backgroundsJsonUrl, 'backgroundsJson', normalizeBackgrounds, isValidBackgroundsCache);
+            if (window.Alpine && Alpine.store && backgroundsData) {
+                const store = Alpine.store('characterData');
+                if (store) {
+                    store.backgrounds = (backgroundsData.background || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+                }
+            }
         }
 
 

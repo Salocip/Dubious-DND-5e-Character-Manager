@@ -11,6 +11,8 @@ function storageStateFor(items) {
         localStorage: [
           { name: 'equipmentJson', value: JSON.stringify({ _meta: { internalCopies: ['item'] }, item: items }) },
           { name: 'classesLookupJson', value: '{}' },
+          { name: 'racesJson', value: JSON.stringify({ _v: 1, race: [], subrace: [] }) },
+          { name: 'backgroundsJson', value: JSON.stringify({ _v: 1, background: [] }) },
         ],
       },
     ],

@@ -11,6 +11,7 @@
 // runner converts offsets to 1-based line/col and aggregates output.
 
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,6 +73,11 @@ function templateLiterals(source) {
 function splitSources(source) {
   const tags = findAll(source, /<script\b[^>]*>([\s\S]*?)<\/script>/gi);
   if (tags.length === 0) {
+    // No <script> tags. Plain JS files become one big script block; markup
+    // (e.g. an Alpine snippet passed to runSource) is treated as pure HTML.
+    if (/<[a-zA-Z]/.test(source)) {
+      return { htmlText: source, scriptText: "", scriptBlocks: [] };
+    }
     return { htmlText: "", scriptText: source, scriptBlocks: [{ text: source, base: 0 }] };
   }
   let htmlText = source;
@@ -192,6 +198,98 @@ function xDataKeys(expr) {
   for (const m of findAll(inner, /([A-Za-z_$][\w$]*)\s*:/g)) keys.add(m.match[1]);
   for (const m of findAll(inner, /(?:^|,|\{)([A-Za-z_$][\w$]*)\s*(?=,|\})/g)) keys.add(m.match[1]);
   return keys;
+}
+
+// Index of the matching close brace for the '{' at openIdx (string-aware).
+function balancedBraceEnd(text, openIdx) {
+    let depth = 0;
+    let inStr = null;
+    for (let i = openIdx; i < text.length; i++) {
+        const ch = text[i];
+        if (inStr) {
+            if (ch === "\\") { i++; continue; }
+            if (ch === inStr) inStr = null;
+            continue;
+        }
+        if (ch === '"' || ch === "'" || ch === "`") { inStr = ch; continue; }
+        if (ch === "{") depth++;
+        else if (ch === "}") { depth--; if (depth === 0) return i; }
+    }
+    return -1;
+}
+
+// Top-level property/method/getter names of a balanced object literal
+// (must begin with '{'). Handles `key: v`, shorthand `key`, `key() {}`,
+// `get key() {}`, `set key() {}`, `async key() {}`.
+function objectKeys(literal) {
+    const keys = new Set();
+    let depth = 0;
+    let inStr = null;
+    let i = 0;
+    while (i < literal.length) {
+        const ch = literal[i];
+        if (inStr) {
+            if (ch === "\\") { i += 2; continue; }
+            if (ch === inStr) inStr = null;
+            i++;
+            continue;
+        }
+        if (ch === '"' || ch === "'" || ch === "`") { inStr = ch; i++; continue; }
+        if (ch === "{") { depth++; i++; continue; }
+        if (ch === "}") { depth--; i++; continue; }
+        if (depth === 1) {
+            const m = /^\s*(?:(?:get|set|async)\s+)?([A-Za-z_$][\w$]*)\s*([:(,}])/.exec(literal.slice(i));
+            if (m) {
+                keys.add(m[1]);
+                i += m[0].length;
+                continue;
+            }
+        }
+        i++;
+    }
+    return keys;
+}
+
+// Loop-variable names bound by an x-for expression (`item in items`,
+// `(item, index) in items`).
+function xForVars(expr) {
+    const vars = new Set();
+    if (!expr) return vars;
+    const m = expr.match(/^\s*(?:\(\s*([^)]*)\s*\)|([A-Za-z_$][\w$]*))\s*in\b/);
+    const lhs = m ? (m[1] ?? m[2] ?? "").trim() : "";
+    if (!lhs) return vars;
+    for (const part of lhs.split(",")) {
+        const name = part.trim();
+        if (/^[A-Za-z_$][\w$]*$/.test(name)) vars.add(name);
+    }
+    return vars;
+}
+
+// Content byte-ranges of every <template x-for="...">...</template>, with the
+// loop variables it binds (so those vars count as in-scope inside).
+function collectXForScopes(htmlText) {
+    const scopes = [];
+    const tagRe = /<\/?template\b[^>]*>/gi;
+    const stack = [];
+    for (const m of findAll(htmlText, tagRe)) {
+        const full = m.match[0];
+        if (full.startsWith("</")) {
+            const t = stack.pop();
+            if (t && t.vars.size) scopes.push({ vars: t.vars, start: t.start, end: m.index });
+            continue;
+        }
+        const xf = /x-for\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/.exec(full);
+        const vars = xf ? xForVars(xf[1] ?? xf[2] ?? xf[3]) : new Set();
+        stack.push({ vars, start: m.index });
+    }
+    return scopes;
+}
+
+function inXForScope(scopes, pos, word) {
+    for (const s of scopes) {
+        if (pos >= s.start && pos < s.end && s.vars.has(word)) return true;
+    }
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -330,6 +428,21 @@ const rules = [
       const decls = new Set();
       for (const m of findAll(ctx.scriptText, /function\s+([A-Za-z_$][\w$]*)\s*\(/g)) decls.add(m.match[1]);
       for (const m of findAll(ctx.scriptText, /(?:^|[;{}()])\s*(?:var|let|const)\s+([A-Za-z_$][\w$]*)/g)) decls.add(m.match[1]);
+      // Alpine.data('name', () => ({ ... })) component registrations: the
+      // component name and its top-level keys are resolvable via x-data="name".
+      const components = new Set();
+      for (const m of findAll(ctx.scriptText, /Alpine\.data\(\s*["']([^"']+)["']\s*,/g)) {
+        components.add(m.match[1]);
+        const after = ctx.scriptText.slice(m.index + m.match[0].length);
+        const objOpen = after.indexOf("{");
+        if (objOpen === -1) continue;
+        const objEnd = balancedBraceEnd(after, objOpen);
+        if (objEnd === -1) continue;
+        for (const k of objectKeys(after.slice(objOpen, objEnd + 1))) keys.add(k);
+      }
+
+      // x-for loop-variable scopes.
+      const xForScopes = collectXForScopes(ctx.htmlText);
       const exprRe = /(@[\w:.-]+|x-[\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
       const exprs = [];
       for (const m of findAll(ctx.htmlText, exprRe)) {
@@ -345,8 +458,9 @@ const rules = [
       }
       for (const e of exprs) {
         for (const id of exprIdentifiers(e.value)) {
-          if (keys.has(id.word) || decls.has(id.word) || BUILTINS.has(id.word)) continue;
+          if (keys.has(id.word) || decls.has(id.word) || components.has(id.word) || BUILTINS.has(id.word)) continue;
           if (new RegExp(`window\\.${escapeRe(id.word)}\\b`).test(ctx.source)) continue;
+          if (inXForScope(xForScopes, e.base + id.index, id.word)) continue;
           out.push({
             index: e.base + id.index,
             message: `unresolved identifier '${id.word}' in Alpine expression — declare it in x-data or the script, or use a known global`,
@@ -848,16 +962,9 @@ const rules = [
 // Runner
 // ---------------------------------------------------------------------------
 
-function runFile(file) {
-  const source = fs.readFileSync(file, "utf8");
+function runSource(source, file) {
   const { htmlText, scriptText, scriptBlocks } = splitSources(source);
-  const ctx = {
-    file,
-    source,
-    htmlText,
-    scriptText,
-    scriptBlocks,
-  };
+  const ctx = { file: file ?? "", source, htmlText, scriptText, scriptBlocks };
   const findings = [];
   for (const rule of rules) {
     for (const f of rule.run(ctx)) {
@@ -875,6 +982,10 @@ function runFile(file) {
   const order = new Map(rules.map((r, i) => [r.id, i]));
   unique.sort((a, b) => (order.get(a.ruleId) - order.get(b.ruleId)) || (a.line - b.line) || (a.col - b.col));
   return unique;
+}
+
+function runFile(file) {
+  return runSource(fs.readFileSync(file, "utf8"), file);
 }
 
 function main() {
@@ -899,4 +1010,8 @@ function main() {
   process.exit(0);
 }
 
-main();
+if (process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url)) {
+    main();
+}
+
+export { runSource, runFile, rules };

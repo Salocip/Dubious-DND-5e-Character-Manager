@@ -10,6 +10,7 @@
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
+    "test:custom": "node --test scripts/lint-custom.test.mjs",
     "lint": "npm run lint:eslint; npm run lint:html; npm run lint:custom",
     "lint:eslint": "eslint main.html tests scripts eslint.config.js",
     "lint:html": "html-validate main.html",
