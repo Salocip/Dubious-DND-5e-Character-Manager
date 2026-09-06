@@ -112,7 +112,7 @@
                     </div>
                     <div class="flex flex-col space-y-1">
                         <label for="classLevel" class="text-xs text-gray-500 uppercase">Level</label>
-                        <input type="number" id="classLevel" min="1" max="20" value="1"
+                        <input type="number" id="classLevel" min="1" max="20" x-model.number="character.level"
                             class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
@@ -666,6 +666,7 @@
                     subrace: null,
                     alignment: '',
                     xp: '',
+                    level: 1,
                     asi: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
                     asiChoices: {},
                     speed: 30,
@@ -1108,7 +1109,10 @@
                     return (m >= 0 ? '+' : '') + m;
                 },
 
-                proficiencyBonus() { return 2; },
+                proficiencyBonus() {
+                    const lvl = Number(this.character.level) || 1;
+                    return Math.ceil(lvl / 4) + 1;
+                },
 
                 skillKey(s) {
                     return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
